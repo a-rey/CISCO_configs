@@ -6,11 +6,13 @@
 
 ## VLANs
 
+Define on an interface:
+
 ```
 Switch(config-if)#switchport access vlan <x>
 ```
 
-_or_
+Define globally:
 
 ```
 Switch(config)#vlan <x>
@@ -31,12 +33,12 @@ Overview:
 
 ```
 Switch#show vlan summary
-Number of existing VLANs		: 3
-Number of existing VTP VLANs		: 3
+Number of existing VLANs          : 3
+Number of existing VTP VLANs      : 3
 Number of existing extended VLANs	: 0
 ```
 
-Defined VLANs in *vlan.dat*:
+Defined VLANs:
 
 ```
 Switch#show vlan brief
@@ -74,12 +76,35 @@ Primary Secondary Type              Ports
 Switch#
 ```
 
+MAC addresses per VLAN per port:
+
+```
+Switch#show mac address-table dynamic
+          Mac Address Table
+-------------------------------------------
+Vlan  Mac Address     Type     Ports
+----  -----------     ----     -----
+12    0200.1111.1111  dynamic  Fa0/11
+12    0200.2222.2222  dynamic  Gi0/1
+11    0200.3333.3333  dynamic  Gi0/1
+11    0200.4444.4444  dynamic  Gi0/1
+```
+
 ## Trunks
+
+Define on an interface:
+
+```
+Switch(config-if)#switchport mode trunk
+Switch(config-if)#switchport trunk encapsulation <dot1q|isl|nonegotiate>
+Switch(config-if)#switchport trunk allowed vlan <add|all|except|remove> <x>
+Switch(config-if)#switchport trunk native vlan <x>
+```
 
 ### Dynamic Trunking Protocol
 
 ```
-Switch(config-if)#switchport mode <access|trunk|dynamic auto|dynamic desirable>
+Switch(config-if)#switchport mode <dynamic auto|dynamic desirable>
 ```
 
 | Admin Mode          | Access      | Dynamic Auto | Trunk       | Dynamic Desirable |
@@ -89,13 +114,6 @@ Switch(config-if)#switchport mode <access|trunk|dynamic auto|dynamic desirable>
 | `trunk`             | !!! BAD !!! | Trunk        | Trunk       | Trunk             |
 | `dynamic desirable` | Access      | Trunk        | Trunk       | Trunk             |
 
-```
-Switch(config-if)#switchport mode trunk
-Switch(config-if)#switchport trunk encapsulation <dot1q|isl|nonegotiate>
-Switch(config-if)#switchport trunk allowed vlan <add|all|except|remove> <x>
-Switch(config-if)#switchport trunk native vlan <x>
-```
-
 *NOTE:* Disable all auto negotiation (trunk protocol negotiation **and** operational mode):
 
 ```
@@ -104,7 +122,7 @@ Switch(config-if)#switchport nonegotiate
 
 ### Troubleshooting
 
-List current trunks:
+List current trunks and allowed VLANs:
 
 ```
 Switch#show interfaces trunk
@@ -138,22 +156,94 @@ Voice VLAN: none
 Appliance trust: none
 ```
 
+## VLAN Trunking Protocol
+
+Set VTP domain/password (both unset by default):
+
+_NOTE:_ Domain and password must match (case sensitive) on all devices in VTP domain
+
+```
+Switch(config)#vtp domain <x>
+Switch(config)#vtp password <x>
+```
+
+Set VTP mode (`server` mode is the default):
+
+| Function                                 | `server` | `client` | `transparent` | `off` |
+| ---------------------------------------- | -------- | -------- | ------------- | ----- |
+| Only sends VTP messages on trunks        | Y        | Y        | Y             | N     |
+| Allows VLAN database changes             | Y        | N        | Y             | Y     |
+| Can use standard range VLANs (1-1005)    | Y        | Y        | Y             | Y     |
+| Can use extended range VLANs (1006-4095) | N        | N        | Y             | Y     |
+
+```
+Switch(config)#vtp mode <server|client|transparent|off>
+```
+
+Set VTP version (version 1 is the default):
+
+```
+Switch(config)#vtp version <1|2|3>
+```
+
+Enable VTP pruning (disabled by default):
+
+```
+Switch(config)#vtp pruning
+```
+
+### Troubleshooting
+
+Show current VTP status:
+
+```
+Switch#show vtp status
+
+VTP Version capable             : 1 to 3
+VTP Version running             : 3
+Configuration Revision          : 0
+Maximum VLANs supported locally : 255
+Number of existing VLANs        : 7
+VTP Operating Mode              : Server
+VTP Domain Name                 : test-domain-name
+VTP Pruning Mode                : Enable
+VTP V2 Mode                     : Disabled
+VTP Traps Generation            : Disabled
+MD5 digest                      : ddd4 ad64 4a9f a191 96a4 e053 b433
+Configuration last modified by 0.0.0.0 at 1-30-2020 19:40:05
+```
+
 ## Spanning Tree Protocol
 
-Manually specifying root/secondary switch in a given VLAN **or** manual priority:
+Manually specifying root/secondary switch in a given VLAN **or** with a manual priority:
+
+- `root`: priority will be 24576 **or** the next lowest multiple of 4096 if 24576 is not low enough to become root _now_
+- `secondary`: priority will be 28672 
+- _NOTE:_ default base priority is 32768 (VLAN ID is added to this value)
 
 ```
 Switch(config)#spanning-tree vlan <x> root <primary|secondary>
 Switch(config)#spanning-tree vlan <x> priority <y>
 ```
 
-Manually specifying port (all VLANs) **or** per VLAN cost:
+Manually specifying port cost for all VLANs **or** per VLAN cost:
 
 ```
 Switch(config)#interface <x>
 Switch(config-if)#spanning-tree vlan <x> cost <y>
 Switch(config-if)#spanning-tree cost <x>
 ```
+
+Default port costs:
+
+| Speed    | IEEE Cost (pre 1998) | IEEE Cost (post 2004) |
+| -------- | -------------------- | --------------------- |
+| 10 Mbps  | 100                  | 2000000               |
+| 100 Mbps | 19                   | 200000                |
+| 1 Gbps   | 4                    | 20000                 |
+| 10 Gbps  | 2                    | 2000                  |
+| 100 Gbps | N/A                  | 200                   |
+| 1 Tbps   | N/A                  | 20                    |
 
 ### PortFast
 
@@ -212,7 +302,7 @@ Gi0/1            Root FWD 4         128.25   P2p
 Gi0/2            Desg FWD 4         128.26   P2p
 ```
 
-Display per VLAN _local_ bridge ID, timers, and protocol:
+Display per VLAN _local_ bridge ID settings:
 
 ```
 Switch#show spanning-tree bridge
@@ -224,7 +314,7 @@ VLAN0022         32790(32768,   22) 0019.e86a.1180    2    20   15  ieee
 VLAN0045         32813(32768,   45) 0019.e86a.1180    2    20   15  ieee
 ```
 
-Display per VLAN root bridge ID, timers, and _local_ root port/root cost:
+Display per VLAN root bridge ID details:
 
 ```
 Switch#show spanning-tree root
@@ -245,7 +335,7 @@ VLAN0002                                       disabled
 VLAN0045                                       disabled
 ```
 
-Display per VLAN interface costs, states, roles, types, and priority:
+Display per VLAN interface STP settings:
 
 ```
 Switch#show spanning-tree interface FastEthernet 0/1
