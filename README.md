@@ -372,7 +372,7 @@ Switch(config)#interface range <x>
 Switch(config-if-range)#channel-group <x> mode on
 ```
 
-Define dynamic channel (PAgP):
+Define dynamic channel (PAgP - Cisco Proprietary):
 
 |             | `on`        | `desirable` | `auto`      |
 | ----------- | ----------- | ----------- | ----------- |
@@ -385,7 +385,7 @@ Switch(config)#interface range <x>
 Switch(config-if-range)#channel-group <x> mode <desirable|auto>
 ```
 
-Define dynamic channel (LACP):
+Define dynamic channel (LACP - IEEE 802.3ad):
 
 |           | `on`        | `active`    | `passive`   |
 | --------- | ----------- | ----------- | ----------- |
@@ -416,6 +416,225 @@ Number of aggregators:           1
 Group  Port-channel  Protocol        Ports
 ------+-------------+-----------+----------------------------------------
   1     Po1(SU)          PagP        Fa0/1(P)      Fa0/2(P)
+```
+
+## OSPF
+
+Enable with a process ID (needs to be _locally_ unique):
+
+```
+Router(config)#router ospf <process-id>
+```
+
+Define max number of equal metric OSPF routes used for load ballancing (default 4):
+
+```
+Router(config-router)#maximum-paths <max>
+```
+
+Define a passive OSPF interface:
+
+```
+Router(config-router)#passive-interface <interface>
+```
+
+**or**
+
+```
+Router(config-router)#passive-interface default
+Router(config-router)#no passive-interface <interface>
+```
+
+Specify OSPF to advertise a default route (`always` means advertise one even if one does not exist):
+
+```
+Router(config-router)#default-information originate <always>
+```
+
+Specify interfaces to advertise/learn on:
+
+```
+Router(config-router)#network <network> <wildcard> area <area>
+```
+
+Specify interfaces to advertise/learn on using OSPFv2:
+
+```
+Router(config-if)#ip ospf <process-id> area <area>
+```
+
+Manually specify Router ID (RID). 
+
+_NOTE:_ RID selection priority ranking:
+
+1. `router-id` command
+2. Highest Loopback interface IP
+3. Highest interface IP
+
+```
+Router(config-router)#router-id <rid>
+```
+
+Adjusting interface cost:
+
+_NOTE:_ `(reference bandwidth / interface bandwidth) = cost`)
+
+1. Manually:
+
+   ```
+   Router(config-if)#ip ospf cost <cost>
+   ```
+
+2. By interface bandwidth:
+
+   ```
+   Router(config-if)#bandwidth <bandwidth in bps>
+   ```
+
+3. By reference bandwidth (default is 100000):
+
+   ```
+   Router(config-router)#auto-cost reference-bandwidth <bandwidth in Mbps>
+   ```
+
+Adjusting hello timer (default is 10 seconds):
+
+```
+Router(config-if)#ip ospf hello-interval <seconds>
+```
+
+Adjusting dead-interval timer (default is 4 * hello timer value):
+
+```
+Router(config-if)#ip ospf dead-interval <seconds>
+```
+
+### Troubleshooting
+
+OSPF overview:
+
+```
+Router#sh ip protocols
+*** IP Routing is NSF aware ***
+Routing Protocol is "ospf 10"
+  Outgoing update filter list for all interfaces is not set
+  Incoming update filter list for all interfaces is not set
+  Router ID 172.16.24.9
+  Number of areas in this router is 1. 1 normal 0 stub 0 nssa
+  Maximum path: 4
+  Routing for Networks:
+    172.16.24.9 0.0.0.0 area 3
+    172.16.20.0 0.0.3.255 area 0
+  Routing Information Sources:
+    Gateway			Distance		Last Update
+    172.16.24.10			110			02:07:17
+  Distance: (default is 110)
+```
+
+OSPF interface settings overview:
+
+```
+Router#sh ip ospf interface brief
+Interface  	PID  	Area  	IP Address/Mask  	Cost  	State  	Nbrs F/C
+Gi0/0      	1    	0     	10.10.10.1/24    	1     	DR     	0/0
+Se0/0/0    	1    	2     	10.0.1.1/30      	64    	P2P    	1/1
+Se0/0/1    	1    	3     	10.0.1.5/30      	64    	P2P    	1/1
+Se0/1/0    	1    	4     	10.0.1.9/30      	64    	P2P    	1/1
+```
+
+OSPF interface settings detail:
+
+```
+Router#sh ip ospf interface Serial 0/0/0
+Serial0/0/0 is up, line protocol is up
+  Internet Address 172.16.24.9/30, Area 3
+  Process ID 10, Router ID 172.16.24.9, Network Type POINT_TO_POINT, Cost: 64
+  Transmit Delay is 1 sec, State POINT_TO_POINT,
+  Timer intervals configured, Hello 10, Dead 40, Wait 40, Retransmit 5
+    oob-resync timeout 40
+    Hello due in 00:00:2
+  Supports Link-local Signaling (LLS)
+  Index 1/2, flood queue length 0
+  Next 0x0(0)/0x0(0)
+  Last flood scan length is 1, maximum is 1
+  Last flood scan time is 0 msec, maximum is 0 msec
+  Neighbor Count is 1, Adjacent neighbor count is 1
+    Adjacent with neighbor 172.16.24.10
+  Suppress hello for 0 neighbor(s)
+```
+
+OSPF active _and_ learned routes:
+
+```
+Router#show ip route ospf
+Codes: L - local, C - connected, S - static, R - RIP, M - mobile, B - BGP
+       D - EIGRP, EX - EIGRP external, O - OSPF, IA - OSPF inter area
+       N1 - OSPF NSSA external type 1, N2 - OSPF NSSA external type 2
+       E1 - OSPF external type 1, E2 - OSPF external type 2
+       i - IS-IS, su - IS-IS summary, L1 - IS-IS level-1, L2 - IS-IS level-2
+       ia - IS-IS inter area, * - candidate default, U - per-user static route
+       o - ODR, P - periodic downloaded static route, H - NHRP, l - LISP
+       + - replicated route, % - next hop override
+Gateway of last resort is not set
+     10.0.0.0/8 is variably subnetted, 9 subnets, 3 masks
+O       10.1.0.0/24 [110/65] via 10.51.0.1, 00:45:35, Serial0/0/0
+O       10.2.0.0/24 [110/65] via 10.52.0.1, 00:45:35, Serial0/0/1
+O       10.50.0.0/30 [110/128] via 10.51.0.1, 00:45:35, Serial0/0/0
+                     [110/128] via 10.52.0.1, 00:04:38, Serial0/0/1
+     192.168.1.0/24 is variably subnetted, 5 subnets, 2 masks
+O       192.168.1.64/26 [110/2] via 192.168.3.5, 00:45:35, GigabitEthernet0/0
+O       192.168.1.128/26 [110/2] via 192.168.3.4, 00:45:35, GigabitEthernet0/0
+O IA    192.168.1.192/26 [110/2] via 192.168.3.3, 00:45:35, GigabitEthernet0/0
+```
+
+Display OSPF neighbor information:
+
+```
+Router#show ip ospf neighbor
+1.1.1.1      1    Full/DR       00:00:31   192.168.1.1  GigabitEthernet0/0
+2.2.2.2      1    Full/BDR      00:00:31   192.168.1.2  GigabitEthernet0/0
+3.3.3.3      1    2Way/DROTHER  00:00:31   192.168.1.3  GigabitEthernet0/0
+```
+
+Display OSPF statistics:
+
+```
+Router#show ip ospf
+ Routing Process "ospf 10" with ID 10.51.0.1
+ Start time: 19:09:43, Time elapsed: 00:01:01
+ Supports only single TOS(TOS0) routes
+ Supports opaque LSA
+ Supports Link-local Signaling (LLS)
+ Supports area transit capability
+ Router is not originating router-LSAs with maximum metric
+ Initial SPF schedule delay 5000 msecs
+ Minimum hold time between two consecutive SPFs 10000 msecs
+ Maximum wait time between two consecutive SPFs 10000 msecs
+ Incremental-SPF disabled
+ Minimum LSA interval 5 secs
+ Minimum LSA arrival 1000 msecs
+ LSA group pacing timer 240 secs
+ Interface flood pacing timer 33 msecs
+ Retransmission pacing timer 66 msecs
+ Number of external LSA 0. Checksum Sum 0x000000
+ Number of opaque AS LSA 0. Checksum Sum 0x000000
+ Number of DCbitless external and opaque AS LSA 0
+ Number of DoNotAge external and opaque AS LSA 0
+ Number of areas in this router is  1. 1 normal 0 stub 0 nssa
+ Number of areas transit capable is 0
+ External flood list length 0
+   Area  BACKBONE(0)
+	     Number of interfaces in this area is 3
+	     Area has no authentication
+	     SPF algorithm last executed 19:09:43 ago
+	     SPF algorithm executed 5 times
+	     Area ranges are
+	     Number of LSA 2. Checksum Sum 0x008AC0
+	     Number of opaque link LSA 0. Checksum Sum 0x000000
+	     Number of DCbitless LSA 0
+	     Number of indication LSA 0
+	     Number of DoNotAge LSA 0
+	     Flood list length 0
 ```
 
 
