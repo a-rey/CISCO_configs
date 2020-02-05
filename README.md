@@ -468,7 +468,6 @@ Adjusting timers:
 
 Adjusting interface cost:
 - Manually:
-  
   - `Router(config-if)#ip ospf cost <cost>`
 - By interface bandwidth:
   - `Router(config-if)#bandwidth <bandwidth in Kbps>`
@@ -478,7 +477,6 @@ Adjusting interface cost:
   - `Router(config-router)#auto-cost reference-bandwidth <bandwidth in Mbps>`
     - _NOTE:_ default is 100000 bps or 100 Mbps
 - _NOTE:_ cost equation: 
-  
   - `cost = (reference bandwidth / interface bandwidth)`
 - _NOTE:_ default costs:
 
