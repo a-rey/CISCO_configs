@@ -1,3 +1,5 @@
+
+
 # CISCO Configuration Guide
 
 [TOC]
@@ -367,10 +369,10 @@ Port 11(FastEthernet0/11) of VLAN0001 is designated forwarding
 
 Define static channel:
 
-```
-Switch(config)#interface range <x>
-Switch(config-if-range)#channel-group <x> mode on
-```
+- ```
+  Switch(config)#interface range <x>
+  Switch(config-if-range)#channel-group <x> mode on
+  ```
 
 Define dynamic channel (PAgP - Cisco Proprietary):
 
@@ -380,10 +382,10 @@ Define dynamic channel (PAgP - Cisco Proprietary):
 | `desirable` | !!! BAD !!! | Y           | Y           |
 | `auto`      | !!! BAD !!! | Y           | N           |
 
-```
-Switch(config)#interface range <x>
-Switch(config-if-range)#channel-group <x> mode <desirable|auto>
-```
+- ```
+  Switch(config)#interface range <x>
+  Switch(config-if-range)#channel-group <x> mode <desirable|auto>
+  ```
 
 Define dynamic channel (LACP - IEEE 802.3ad):
 
@@ -393,10 +395,10 @@ Define dynamic channel (LACP - IEEE 802.3ad):
 | `active`  | !!! BAD !!! | Y           | Y           |
 | `passive` | !!! BAD !!! | Y           | N           |
 
-```
-Switch(config)#interface range <x>
-Switch(config-if-range)#channel-group <x> mode <passive|active>
-```
+- ```
+  Switch(config)#interface range <x>
+  Switch(config-if-range)#channel-group <x> mode <passive|active>
+  ```
 
 ### Troubleshooting
 
@@ -420,101 +422,126 @@ Group  Port-channel  Protocol        Ports
 
 ## OSPF
 
-Enable with a process ID (needs to be _locally_ unique):
+Enable with a process ID:
 
-```
-Router(config)#router ospf <process-id>
-```
+- `Router(config)#router ospf <process-id>`
+  - _NOTE:_ `process-id` needs to be **locally** unique
 
-Define max number of equal metric OSPF routes used for load ballancing (default 4):
+Define max number of OSPF routes used for equal metric load ballancing:
 
-```
-Router(config-router)#maximum-paths <max>
-```
+- `Router(config-router)#maximum-paths <max>`
+  - _NOTE:_ default `max` is 4
+  - _NOTE:_ set `max` to 1 to disable load ballancing
 
 Define a passive OSPF interface:
 
-```
-Router(config-router)#passive-interface <interface>
-```
+- `Router(config-router)#passive-interface <interface>`
 
-**or**
+- _NOTE:_ can also enable globally:
+  
+  - ```
+  Router(config-router)#passive-interface default
+    Router(config-router)#no passive-interface <interface>
+    ```
 
-```
-Router(config-router)#passive-interface default
-Router(config-router)#no passive-interface <interface>
-```
+Specify OSPF to advertise a default route:
 
-Specify OSPF to advertise a default route (`always` means advertise one even if one does not exist):
-
-```
-Router(config-router)#default-information originate <always>
-```
+- `Router(config-router)#default-information originate [always]`
+  - _NOTE:_ `always` option means advertise a default route even if one does not exist
 
 Specify interfaces to advertise/learn on:
 
-```
-Router(config-router)#network <network> <wildcard> area <area>
-```
+- `Router(config-router)#network <network> <wildcard> area <area>`
+  - _NOTE:_ if an interface matches 2 different `network` statements, the first one that was configured is used as the area and mask
+- `Router(config-if)#ip ospf <process-id> area <area>`
+  - _NOTE:_ interface ospf area configuration is prefered over the `network` command if both are configured and match an interface
 
-Specify interfaces to advertise/learn on using OSPFv2:
+Manually specify Router ID (RID):
 
-```
-Router(config-if)#ip ospf <process-id> area <area>
-```
+- `Router(config-router)#router-id <rid>`
 
-Manually specify Router ID (RID). 
+  - _NOTE:_ RID selection priority ranking:
 
-_NOTE:_ RID selection priority ranking:
+    1. `router-id` command value
 
-1. `router-id` command
-2. Highest Loopback interface IP
-3. Highest interface IP
+    2. Highest Loopback interface IP (does not need to be OSPF enabled!)
 
-```
-Router(config-router)#router-id <rid>
-```
+    3. Highest interface IP (does not need to be OSPF enabled!)
+
+  - _NOTE:_ changing RID at runtime requires OSPF neighbor discovery to be restarted:
+
+    - `Router# clear ip ospf process`
+    - `Router# reload`
+
+Adjusting timers:
+
+- Hello timer: `Router(config-if)#ip ospf hello-interval <seconds>`
+  - _NOTE:_ default is 10 seconds for Ethernet interfaces
+  - _NOTE:_ default is 30 seconds for Serial interfaces
+
+- Dead timer: `Router(config-if)#ip ospf dead-interval <seconds>`
+  - _NOTE:_ default is 4 * hello timer value
+
+### Cost
 
 Adjusting interface cost:
 
-_NOTE:_ `(reference bandwidth / interface bandwidth) = cost`)
+- Manually:
 
-1. Manually:
+  - `Router(config-if)#ip ospf cost <cost>`
 
-   ```
-   Router(config-if)#ip ospf cost <cost>
-   ```
+- By interface bandwidth:
 
-2. By interface bandwidth:
+  - `Router(config-if)#bandwidth <bandwidth in Kbps>`
+    - _NOTE:_ find interface default bandwidth in Kbps:
+      - `Router#show interface <int>`
 
-   ```
-   Router(config-if)#bandwidth <bandwidth in bps>
-   ```
+- By reference bandwidth:
 
-3. By reference bandwidth (default is 100000):
+  - `Router(config-router)#auto-cost reference-bandwidth <bandwidth in Mbps>`
+    - _NOTE:_ default is 100000 bps or 100 Mbps
 
-   ```
-   Router(config-router)#auto-cost reference-bandwidth <bandwidth in Mbps>
-   ```
+- _NOTE:_ cost equation: 
 
-Adjusting hello timer (default is 10 seconds):
+  - `cost = (reference bandwidth / interface bandwidth)`
 
-```
-Router(config-if)#ip ospf hello-interval <seconds>
-```
+- _NOTE:_ default costs:
 
-Adjusting dead-interval timer (default is 4 * hello timer value):
-
-```
-Router(config-if)#ip ospf dead-interval <seconds>
-```
+  | Link Type        | Default Bandwidth | Cost |
+  | ---------------- | ----------------- | ---- |
+  | Serial (56K)     | 56 Kbps           | 1785 |
+  | Serial (64K)     | 64 Kbps           | 1562 |
+  | Serial (T1)      | 1,549 Kbps        | 64   |
+  | Ethernet         | 10,000 Kbps       | 10   |
+  | Fast Ethernet    | 100,000 Kbps      | 1    |
+  | Gigabit Ethernet | 1,000,000 Kbps    | 1    |
+  | 10G Ethernet     | 10,000,000 Kbps   | 1    |
+  | 100G Ethernet    | 100,000,000 Kbps  | 1    |
 
 ### Troubleshooting
 
-OSPF overview:
+OSPF issues:
+
+1. No OSPF neighbors
+   1. Authentication values incorrect?
+   2. Local interfaces not in an up&up state?
+   3. OSPF neighbor interfaces not in the same subnet?
+   4. ACL blocking routing protocol packets to 224.0.0.5 and/or 224.0.0.6?
+   5. Non-matched hello/dead timer values?
+   6. Non-unique RIDs?
+   7. Areas do not match?
+   8. MTUs do not match?
+2. Bad area design
+   1. Interfaces in the same subnet but also in different areas?
+   2. Current area not touching an area border router (ABR) to have an interface in the backbone area (area 0)?
+3. Passive interfaces
+   1. `show ip ospf interface brief` shows even passive interfaces!
+      - Use `show ip protocols` to deconflict
+
+Debugging example output:
 
 ```
-Router#sh ip protocols
+Router#show ip protocols
 *** IP Routing is NSF aware ***
 Routing Protocol is "ospf 10"
   Outgoing update filter list for all interfaces is not set
@@ -531,10 +558,8 @@ Routing Protocol is "ospf 10"
   Distance: (default is 110)
 ```
 
-OSPF interface settings overview:
-
 ```
-Router#sh ip ospf interface brief
+Router#show ip ospf interface brief
 Interface  	PID  	Area  	IP Address/Mask  	Cost  	State  	Nbrs F/C
 Gi0/0      	1    	0     	10.10.10.1/24    	1     	DR     	0/0
 Se0/0/0    	1    	2     	10.0.1.1/30      	64    	P2P    	1/1
@@ -542,10 +567,8 @@ Se0/0/1    	1    	3     	10.0.1.5/30      	64    	P2P    	1/1
 Se0/1/0    	1    	4     	10.0.1.9/30      	64    	P2P    	1/1
 ```
 
-OSPF interface settings detail:
-
 ```
-Router#sh ip ospf interface Serial 0/0/0
+Router#show ip ospf interface Serial 0/0/0
 Serial0/0/0 is up, line protocol is up
   Internet Address 172.16.24.9/30, Area 3
   Process ID 10, Router ID 172.16.24.9, Network Type POINT_TO_POINT, Cost: 64
@@ -562,8 +585,6 @@ Serial0/0/0 is up, line protocol is up
     Adjacent with neighbor 172.16.24.10
   Suppress hello for 0 neighbor(s)
 ```
-
-OSPF active _and_ learned routes:
 
 ```
 Router#show ip route ospf
@@ -587,16 +608,13 @@ O       192.168.1.128/26 [110/2] via 192.168.3.4, 00:45:35, GigabitEthernet0/0
 O IA    192.168.1.192/26 [110/2] via 192.168.3.3, 00:45:35, GigabitEthernet0/0
 ```
 
-Display OSPF neighbor information:
-
 ```
 Router#show ip ospf neighbor
+Neighbor ID  Pri  State         Dead Time  Address      Interface
 1.1.1.1      1    Full/DR       00:00:31   192.168.1.1  GigabitEthernet0/0
 2.2.2.2      1    Full/BDR      00:00:31   192.168.1.2  GigabitEthernet0/0
 3.3.3.3      1    2Way/DROTHER  00:00:31   192.168.1.3  GigabitEthernet0/0
 ```
-
-Display OSPF statistics:
 
 ```
 Router#show ip ospf
@@ -636,6 +654,217 @@ Router#show ip ospf
 	     Number of DoNotAge LSA 0
 	     Flood list length 0
 ```
+
+```
+Router#show ip ospf database
+                   OSPF Router with ID(192.168.10.1)  (Process ID 50)
+                     Router Link States Area(0)
+LinkID        	ADV Router    	Age  	Seq#         	CheckSum  	Link count
+192.168.30.1  	192.168.30.1  	90   	0x80000002C  	0x00EB29  	3
+192.168.10.1  	192.168.10.1  	181  	0x80000002C  	0x00EB29  	7
+192.168.20.1  	192.168.20.1  	91   	0x80000002C  	0x00EB29  	3
+192.168.40.1  	192.168.40.1  	90   	0x80000002C  	0x00EB29  	3
+```
+
+## EIGRP
+
+Enable with an ASN:
+
+- `Router(config)#router eigrp <asn>`
+  - _NOTE:_ `asn` needs to be **globally** unique
+
+Define max number of EIGRP routes used for _equal cost_ load ballancing:
+
+- `Router(config-router)#maximum-paths <max>`
+  - _NOTE:_ default `max` is 4
+  - _NOTE:_ set `max` to 1 to disable load ballancing
+
+Enable _unequal cost_ load ballancing:
+
+- `Router(config-router)#variance <x>`
+  - _NOTE:_ applies to _all_ EIGRP routes with a sucessor (S) and feasible sucessor (FS) in the topology table
+  - _NOTE:_ allows for FS routes with a `FD(FS) < (variance * FD(S))` to be added to the routing table
+  - _NOTE:_ does **not** add other non-FS routes into the routing table even if they meet the criteria
+
+Define a passive EIGRP interface:
+
+- `Router(config-router)#passive-interface <interface>`
+
+- _NOTE:_ can also enable globally:
+
+  - ```
+    Router(config-router)#passive-interface default
+    Router(config-router)#no passive-interface <interface>
+    ```
+
+Specify interfaces to advertise/learn on:
+
+- `Router(config-router)#network <network> <wildcard>`
+- _NOTE:_ Can also configure using classfull network ID:
+  - `Router(config-router)#network <classfull-network>`
+
+Manually specify Router ID (RID):
+
+- `Router(config-router)#eigrp router-id <rid>`
+
+  - _NOTE:_ RID selection priority ranking:
+
+    1. `router-id` command value
+
+    2. Highest Loopback interface IP (does not need to be EIGRP enabled!)
+
+    3. Highest interface IP (does not need to be EIGRP enabled!)
+
+Enable auto-summarization:
+
+- `Router(config-router)#auto-summary`
+  - _NOTE:_ not enabled by default
+
+Define timers:
+
+- Hello timer: `Router(config-if)#ip hello-interval eigrp <asn> <seconds>`
+  - _NOTE:_ default for Ethernet interfaces is 5 seconds
+  - _NOTE:_ default for Serial interfaces is 60 seconds
+- Hold timer: `Router(config-if)#ip hold-time eigrp <asn> <seconds>`
+  - _NOTE:_ default is 3 * hello timer value
+  - _NOTE:_ value does _not_ change in sync when changing the hello timer directly
+
+### Metric
+
+Metric equation with default K values:
+
+- `metric = 256 * (((10^7) / smallest_bandwidth) + cumulative_delay)`
+- Default K values:
+  - K1 (Bandwidth) = 1
+  - K2 (Load) = 0
+  - K3 (Delay) = 1
+  - K4 (Reliability) = 0
+  - K5 (MTU) = 0
+
+Modify bandwidth:
+
+- `Router(config-if)#bandwidth <bandwidth in Kbps>`
+  - _NOTE:_ default bandwidth can be seen with `Router#show int <int>`
+  - _NOTE:_ is enabled with default K values
+
+Modify delay:
+
+- `Router(config-if)#delay <delay in 10s of microseconds>`
+  - _NOTE:_ default delay can be seen with `Router#show int <int>`
+  - _NOTE:_ is enabled with default K values
+
+### Troubleshooting
+
+EIGRP interfaces:
+
+```
+Router#show ip eigrp interfaces
+IP-EIGRP interfaces for process 50
+                  Xmit Queue   Mean  Pacing Time  Multicast   Pending
+Interface  Peers  Un/Reliable  SRTT  Un/Reliable  Flow Timer  Routes
+Gi0/0      0      0/0          72    0/1          287         0
+Se0/0/0    1      0/0          72    0/15         287         0
+Se0/0/1    1      0/0          72    0/15         287         0
+```
+
+EIGRP overview:
+
+```
+Router#show ip protocols
+*** IP Routing is NSF aware ***
+Routing Protocol is "eigrp 50"
+  Outgoing update filter list for all interfaces is not set
+  Incoming update filter list for all interfaces is not set
+  Default networks flagged in outgoing updates
+  Default networks accepted from incoming updates
+  EIGRP-IPv4 Protocol for AS(10)
+    Metric weight K1=1, K2=0, K3=1, K4=0, K5=0
+    NSF-aware route hold timer is 240s
+    Router-ID: 192.168.10.1
+     Topology : 0(Base)
+       Active Timer: 3 min
+       Distance: internal 90 external 170
+       Maximum Path: 4
+       Maximum hopcount: 100
+       Maximum metric variance: 1
+  Automatic Summarization : disabled
+  Maximum path: 4
+  Routing for Networks:
+    10.50.40.0/24
+    192.0.2.0
+    192.168.10.0
+  Passive Interface(s):
+    GigabitEthernet0/0
+  Routing Information Sources:
+    Gateway     Distance  Last Update
+    192.0.2.2   90        00:12:13
+    192.0.2.10  90        00:12:12
+    192.0.2.6   90        00:12:15
+  Distance: internal 90 external 170
+```
+
+EIGRP neighbor table:
+
+```
+Router#show ip eigrp neighbors
+IP-EIGRP neighbors for process 50
+H  Address          Interface  Hold  Uptime    SRTT  RTQ   Q   Seq
+                               (sec)           (ms)       Cnt  Num
+0  192.0.2.2        Se0/0/0     9    00:14:46  72    432   0    3
+0  192.0.2.6        Se0/0/1     7    00:14:48  72    432   0    3
+0  192.0.2.10       Se0/1/0    11    00:14:44  72    432   0    3
+```
+
+EIGRP topology table:
+
+```
+Router#show ip eigrp topology
+IP-EIGRP Topology Table for AS(50)/ID(192.168.10.1)
+Codes: P - Passive, A - Active, U - Update, Q - Query, R - Reply,
+       r - reply Status, s - sia Status
+P 172.16.34.0/29, 2 successors, FD is 2681856
+        via 192.0.2.6 (2681856/2169856), Serial0/0/1
+        via 192.0.2.10 (2681856/2169856), Serial0/1/0
+P 192.0.2.8/30, 1 successors, FD is 2169856
+        via Connected, Serial0/1/0
+P 192.168.40.0/24, 1 successors, FD is 2172416
+        via 192.0.2.10 (2172416/28160), Serial0/1/0
+P 192.0.2.0/30, 1 successors, FD is 2169856
+        via Connected, Serial0/0/0
+P 192.168.10.0/24, 1 successors, FD is 28160
+        via Connected, GigabitEthernet0/0
+P 192.168.30.0/24, 1 successors, FD is 2172416
+        via 192.0.2.6 (2172416/28160), Serial0/0/1
+P 192.0.2.4/30, 1 successors, FD is 2169856
+        via Connected, Serial0/0/1
+P 192.168.20.0/24, 1 successors, FD is 2172416
+        via 192.0.2.2 (2172416/28160), Serial0/0/0
+```
+
+EIGRP route table:
+
+```
+Router#show ip route eigrp
+Codes: L - local, C - connected, S - static, R - RIP, M - mobile, B - BGP
+       D - EIGRP, EX - EIGRP external, O - OSPF, IA - OSPF inter area
+       N1 - OSPF NSSA external type 1, N2 - OSPF NSSA external type 2
+       E1 - OSPF external type 1, E2 - OSPF external type 2
+       i - IS-IS, su - IS-IS summary, L1 - IS-IS level-1, L2 - IS-IS level-2
+       ia - IS-IS inter area, * - candidate default, U - per-user static route
+       o - ODR, P - periodic downloaded static route, H - NHRP, l - LISP
+       + - replicated route, % - next hop override
+Gateway of last resort is not set
+     172.16.0.0/29 is subnetted, 1 subnets
+D       172.16.34.0 [90/2172416] via 192.0.2.6, 00:17:25, Serial0/0/1
+                    [90/2681856] via 192.0.2.10, 00:01:14, Serial0/1/0
+D    192.168.20.0/24 [90/2172416] via 192.0.2.2, 00:17:23, Serial0/0/0
+D    192.168.30.0/24 [90/2172416] via 192.0.2.6, 00:17:25, Serial0/0/1
+D    192.168.40.0/24 [90/2172416] via 192.0.2.10, 00:17:22, Serial0/1/0
+```
+
+
+
+
 
 
 
