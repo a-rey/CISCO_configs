@@ -423,88 +423,63 @@ Group  Port-channel  Protocol        Ports
 ## OSPF
 
 Enable with a process ID:
-
 - `Router(config)#router ospf <process-id>`
   - _NOTE:_ `process-id` needs to be **locally** unique
 
-Define max number of OSPF routes used for equal metric load ballancing:
-
+Define max number of OSPF routes used for equal cost load balancing:
 - `Router(config-router)#maximum-paths <max>`
   - _NOTE:_ default `max` is 4
-  - _NOTE:_ set `max` to 1 to disable load ballancing
+  - _NOTE:_ set `max` to 1 to disable load balancing
 
 Define a passive OSPF interface:
-
 - `Router(config-router)#passive-interface <interface>`
-
 - _NOTE:_ can also enable globally:
-  
-  - ```
-  Router(config-router)#passive-interface default
-    Router(config-router)#no passive-interface <interface>
-    ```
+  - `Router(config-router)#passive-interface default`
+  - `Router(config-router)#no passive-interface <interface>`
 
 Specify OSPF to advertise a default route:
-
 - `Router(config-router)#default-information originate [always]`
   - _NOTE:_ `always` option means advertise a default route even if one does not exist
 
 Specify interfaces to advertise/learn on:
-
 - `Router(config-router)#network <network> <wildcard> area <area>`
   - _NOTE:_ if an interface matches 2 different `network` statements, the first one that was configured is used as the area and mask
 - `Router(config-if)#ip ospf <process-id> area <area>`
   - _NOTE:_ interface ospf area configuration is prefered over the `network` command if both are configured and match an interface
 
 Manually specify Router ID (RID):
-
 - `Router(config-router)#router-id <rid>`
-
   - _NOTE:_ RID selection priority ranking:
-
     1. `router-id` command value
-
     2. Highest Loopback interface IP (does not need to be OSPF enabled!)
-
     3. Highest interface IP (does not need to be OSPF enabled!)
-
   - _NOTE:_ changing RID at runtime requires OSPF neighbor discovery to be restarted:
-
     - `Router# clear ip ospf process`
     - `Router# reload`
 
 Adjusting timers:
-
 - Hello timer: `Router(config-if)#ip ospf hello-interval <seconds>`
   - _NOTE:_ default is 10 seconds for Ethernet interfaces
   - _NOTE:_ default is 30 seconds for Serial interfaces
-
 - Dead timer: `Router(config-if)#ip ospf dead-interval <seconds>`
   - _NOTE:_ default is 4 * hello timer value
 
 ### Cost
 
 Adjusting interface cost:
-
 - Manually:
-
+  
   - `Router(config-if)#ip ospf cost <cost>`
-
 - By interface bandwidth:
-
   - `Router(config-if)#bandwidth <bandwidth in Kbps>`
     - _NOTE:_ find interface default bandwidth in Kbps:
       - `Router#show interface <int>`
-
 - By reference bandwidth:
-
   - `Router(config-router)#auto-cost reference-bandwidth <bandwidth in Mbps>`
     - _NOTE:_ default is 100000 bps or 100 Mbps
-
 - _NOTE:_ cost equation: 
-
+  
   - `cost = (reference bandwidth / interface bandwidth)`
-
 - _NOTE:_ default costs:
 
   | Link Type        | Default Bandwidth | Cost |
@@ -538,7 +513,7 @@ OSPF issues:
    1. `show ip ospf interface brief` shows even passive interfaces!
       - Use `show ip protocols` to deconflict
 
-Debugging example output:
+Example troubleshooting output:
 
 ```
 Router#show ip protocols
@@ -669,59 +644,43 @@ LinkID        	ADV Router    	Age  	Seq#         	CheckSum  	Link count
 ## EIGRP
 
 Enable with an ASN:
-
 - `Router(config)#router eigrp <asn>`
   - _NOTE:_ `asn` needs to be **globally** unique
 
-Define max number of EIGRP routes used for _equal cost_ load ballancing:
-
+Define max number of EIGRP routes used for _equal cost_ load balancing:
 - `Router(config-router)#maximum-paths <max>`
   - _NOTE:_ default `max` is 4
   - _NOTE:_ set `max` to 1 to disable load ballancing
 
-Enable _unequal cost_ load ballancing:
-
+Enable _unequal cost_ load balancing:
 - `Router(config-router)#variance <x>`
   - _NOTE:_ applies to _all_ EIGRP routes with a sucessor (S) and feasible sucessor (FS) in the topology table
   - _NOTE:_ allows for FS routes with a `FD(FS) < (variance * FD(S))` to be added to the routing table
   - _NOTE:_ does **not** add other non-FS routes into the routing table even if they meet the criteria
 
 Define a passive EIGRP interface:
-
 - `Router(config-router)#passive-interface <interface>`
-
 - _NOTE:_ can also enable globally:
-
-  - ```
-    Router(config-router)#passive-interface default
-    Router(config-router)#no passive-interface <interface>
-    ```
+  - `Router(config-router)#passive-interface default`
+  - `Router(config-router)#no passive-interface <interface>`
 
 Specify interfaces to advertise/learn on:
-
 - `Router(config-router)#network <network> <wildcard>`
 - _NOTE:_ Can also configure using classfull network ID:
   - `Router(config-router)#network <classfull-network>`
 
 Manually specify Router ID (RID):
-
 - `Router(config-router)#eigrp router-id <rid>`
-
   - _NOTE:_ RID selection priority ranking:
-
     1. `router-id` command value
-
     2. Highest Loopback interface IP (does not need to be EIGRP enabled!)
-
     3. Highest interface IP (does not need to be EIGRP enabled!)
 
 Enable auto-summarization:
-
 - `Router(config-router)#auto-summary`
   - _NOTE:_ not enabled by default
 
 Define timers:
-
 - Hello timer: `Router(config-if)#ip hello-interval eigrp <asn> <seconds>`
   - _NOTE:_ default for Ethernet interfaces is 5 seconds
   - _NOTE:_ default for Serial interfaces is 60 seconds
@@ -732,7 +691,6 @@ Define timers:
 ### Metric
 
 Metric equation with default K values:
-
 - `metric = 256 * (((10^7) / smallest_bandwidth) + cumulative_delay)`
 - Default K values:
   - K1 (Bandwidth) = 1
@@ -742,20 +700,35 @@ Metric equation with default K values:
   - K5 (MTU) = 0
 
 Modify bandwidth:
-
 - `Router(config-if)#bandwidth <bandwidth in Kbps>`
   - _NOTE:_ default bandwidth can be seen with `Router#show int <int>`
   - _NOTE:_ is enabled with default K values
 
 Modify delay:
-
 - `Router(config-if)#delay <delay in 10s of microseconds>`
   - _NOTE:_ default delay can be seen with `Router#show int <int>`
   - _NOTE:_ is enabled with default K values
 
 ### Troubleshooting
 
-EIGRP interfaces:
+EIGRP issues:
+
+1. No EIGRP neighbors
+   1. Authentication values incorrect?
+   2. Local interfaces not in an up&up state?
+   3. EIGRP neighbor interfaces not in the same subnet?
+   4. ACL blocking routing protocol packets to 224.0.0.10?
+   5. EIGRP neighbors not in same ASN?
+   6. K-values do not match?
+2. EIGRP neighbors can't stay up
+   1. Hello timer values > neighbor hold timers?
+3. Passive interfaces
+   1. `show ip eigrp interfaces` shows only active interfaces
+      - Use `show ip protocols` to see passive interfaces
+4. Auto summarization issues
+   1. Any discontiguous networks?
+
+Example troubleshooting output:
 
 ```
 Router#show ip eigrp interfaces
@@ -766,8 +739,6 @@ Gi0/0      0      0/0          72    0/1          287         0
 Se0/0/0    1      0/0          72    0/15         287         0
 Se0/0/1    1      0/0          72    0/15         287         0
 ```
-
-EIGRP overview:
 
 ```
 Router#show ip protocols
@@ -803,8 +774,6 @@ Routing Protocol is "eigrp 50"
   Distance: internal 90 external 170
 ```
 
-EIGRP neighbor table:
-
 ```
 Router#show ip eigrp neighbors
 IP-EIGRP neighbors for process 50
@@ -814,8 +783,6 @@ H  Address          Interface  Hold  Uptime    SRTT  RTQ   Q   Seq
 0  192.0.2.6        Se0/0/1     7    00:14:48  72    432   0    3
 0  192.0.2.10       Se0/1/0    11    00:14:44  72    432   0    3
 ```
-
-EIGRP topology table:
 
 ```
 Router#show ip eigrp topology
@@ -840,8 +807,6 @@ P 192.0.2.4/30, 1 successors, FD is 2169856
 P 192.168.20.0/24, 1 successors, FD is 2172416
         via 192.0.2.2 (2172416/28160), Serial0/0/0
 ```
-
-EIGRP route table:
 
 ```
 Router#show ip route eigrp
