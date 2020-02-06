@@ -9,38 +9,29 @@
 ## VLANs
 
 Define on an interface:
-
-```
-Switch(config-if)#switchport access vlan <x>
-```
+- `Switch(config-if)#switchport access vlan <vlan>`
 
 Define globally:
-
-```
-Switch(config)#vlan <x>
-Switch(config-vlan)#exit 
-```
+- `Switch(config)#vlan <vlan>`
+- `Switch(config)#name <vlan-name>`
+- `Switch(config-vlan)#exit`
+  - VLAN not created until exiting VLAN configuration mode
 
 ### Voice VLAN
 
-*NOTE:* must have CDP enabled on port
-
-```
-Switch(config-if)#switchport voice vlan <x|none|untagged|dot1p>
-```
+Define on an interface:
+- `Switch(config-if)#switchport voice vlan <x|none|untagged|dot1p>`
+  - Must have CDP enabled on port
 
 ### Troubleshooting
 
-Overview:
-
+Example troubleshooting output:
 ```
 Switch#show vlan summary
 Number of existing VLANs          : 3
 Number of existing VTP VLANs      : 3
-Number of existing extended VLANs	: 0
+Number of existing extended VLANs : 0
 ```
-
-Defined VLANs:
 
 ```
 Switch#show vlan brief
@@ -61,8 +52,6 @@ VLAN Name                             Status    Ports
 1005 trnet-default                    act/unsup
 ```
 
-Specific VLAN details:
-
 ```
 Switch#show vlan id 11
 VLAN Name                             Status    Ports
@@ -77,8 +66,6 @@ Primary Secondary Type              Ports
 ------- --------- ----------------- ------------------------------------------
 Switch#
 ```
-
-MAC addresses per VLAN per port:
 
 ```
 Switch#show mac address-table dynamic
@@ -95,19 +82,15 @@ Vlan  Mac Address     Type     Ports
 ## Trunks
 
 Define on an interface:
-
-```
-Switch(config-if)#switchport mode trunk
-Switch(config-if)#switchport trunk encapsulation <dot1q|isl|nonegotiate>
-Switch(config-if)#switchport trunk allowed vlan <add|all|except|remove> <x>
-Switch(config-if)#switchport trunk native vlan <x>
-```
+- `Switch(config-if)#switchport mode trunk`
+- `Switch(config-if)#switchport trunk encapsulation <dot1q|isl|nonegotiate>`
+- `Switch(config-if)#switchport trunk allowed vlan <add|all|except|remove> <vlan>`
+- `Switch(config-if)#switchport trunk native vlan <vlan>`
 
 ### Dynamic Trunking Protocol
 
-```
-Switch(config-if)#switchport mode <dynamic auto|dynamic desirable>
-```
+Define on an interface:
+- `Switch(config-if)#switchport mode <dynamic auto|dynamic desirable>`
 
 | Admin Mode          | Access      | Dynamic Auto | Trunk       | Dynamic Desirable |
 | ------------------- | ----------- | ------------ | ----------- | ----------------- |
@@ -116,15 +99,19 @@ Switch(config-if)#switchport mode <dynamic auto|dynamic desirable>
 | `trunk`             | !!! BAD !!! | Trunk        | Trunk       | Trunk             |
 | `dynamic desirable` | Access      | Trunk        | Trunk       | Trunk             |
 
-*NOTE:* Disable all auto negotiation (trunk protocol negotiation **and** operational mode):
-
-```
-Switch(config-if)#switchport nonegotiate
-```
+Disable all auto negotiation (trunk protocol negotiation **and** operational mode):
+- `Switch(config-if)#switchport nonegotiate`
 
 ### Troubleshooting
 
-List current trunks and allowed VLANs:
+Trunk issues:
+
+1. VLAN not allowed on trunk?
+2. Bad DTP paramaters (eg `auto`&`auto` or `access`&`desirable`)?
+3. Native VLANs don't match?
+4. Incorrect encapsulation?
+
+Example troubleshooting output:
 
 ```
 Switch#show interfaces trunk
@@ -137,8 +124,6 @@ Fa0/2       1,10-12
 Port        Vlans in spanning tree forwarding state and not pruned
 Fa0/2       1,10-11
 ```
-
-Check interface VLAN modes:
 
 ```
 Switch#show interfaces fastEthernet 0/2 switchport
@@ -160,16 +145,15 @@ Appliance trust: none
 
 ## VLAN Trunking Protocol
 
-Set VTP domain/password (both unset by default):
+Set VTP domain/password:
+- `Switch(config)#vtp domain <domain-name>`
+- `Switch(config)#vtp password <password>`
+- Domain and password must match (case sensitive) on **all** devices in VTP domain
+- Both are unset by default
 
-_NOTE:_ Domain and password must match (case sensitive) on all devices in VTP domain
-
-```
-Switch(config)#vtp domain <x>
-Switch(config)#vtp password <x>
-```
-
-Set VTP mode (`server` mode is the default):
+Set VTP mode:
+- `Switch(config)#vtp mode <server|client|transparent|off>`
+  - `server` mode is the default
 
 | Function                                 | `server` | `client` | `transparent` | `off` |
 | ---------------------------------------- | -------- | -------- | ------------- | ----- |
@@ -178,25 +162,25 @@ Set VTP mode (`server` mode is the default):
 | Can use standard range VLANs (1-1005)    | Y        | Y        | Y             | Y     |
 | Can use extended range VLANs (1006-4095) | N        | N        | Y             | Y     |
 
-```
-Switch(config)#vtp mode <server|client|transparent|off>
-```
+Set VTP version:
+- `Switch(config)#vtp version <1|2|3>`
+  - Version 1 is the default
 
-Set VTP version (version 1 is the default):
-
-```
-Switch(config)#vtp version <1|2|3>
-```
-
-Enable VTP pruning (disabled by default):
-
-```
-Switch(config)#vtp pruning
-```
+Enable VTP pruning:
+- `Switch(config)#vtp pruning`
+  - Disabled by default
 
 ### Troubleshooting
 
-Show current VTP status:
+VTP issues:
+1. Passwords don't match (check MD5 digest)?
+2. VTP domain names don't match (these are case sensitive!)?
+2. VTP operating modes don't match?
+3. VLANs not syncing?
+   1. Check revision number (highest revision number wins!)?
+   2. Check VTP pruning (maybe the VLANs are not supposed to be there)?
+
+Example troubleshooting output:
 
 ```
 Switch#show vtp status
@@ -218,23 +202,15 @@ Configuration last modified by 0.0.0.0 at 1-30-2020 19:40:05
 ## Spanning Tree Protocol
 
 Manually specifying root/secondary switch in a given VLAN **or** with a manual priority:
-
-- `root`: priority will be 24576 **or** the next lowest multiple of 4096 if 24576 is not low enough to become root _now_
-- `secondary`: priority will be 28672 
-- _NOTE:_ default base priority is 32768 (VLAN ID is added to this value)
-
-```
-Switch(config)#spanning-tree vlan <x> root <primary|secondary>
-Switch(config)#spanning-tree vlan <x> priority <y>
-```
+- `Switch(config)#spanning-tree vlan <vlan> root <primary|secondary>`
+  - `root`: priority will be 24576 **or** the next lowest multiple of 4096 if 24576 is not low enough to become root _now_
+  - `secondary`: priority will be 28672 
+- `Switch(config)#spanning-tree vlan <vlan> priority <priority>`
+  - Default base priority is 32768 (VLAN ID is added to this value)
 
 Manually specifying port cost for all VLANs **or** per VLAN cost:
-
-```
-Switch(config)#interface <x>
-Switch(config-if)#spanning-tree vlan <x> cost <y>
-Switch(config-if)#spanning-tree cost <x>
-```
+- `Switch(config-if)#spanning-tree cost <cost>`
+- `Switch(config-if)#spanning-tree vlan <vlan> cost <cost>`
 
 Default port costs:
 
@@ -250,38 +226,26 @@ Default port costs:
 ### PortFast
 
 Enable globally on **all** interfaces:
-
-```
-Switch(config)#spanning-tree portfast default
-```
+- `Switch(config)#spanning-tree portfast default`
 
 Enable **or** disable per interface:
-
-```
-Switch(config)#interface <x>
-Switch(config-if)#spanning-tree portfast <disable>
-```
+- `Switch(config-if)#spanning-tree portfast [disable]`
 
 ### BPDU Guard
 
 Enable globally:
-
-_NOTE:_ only gets enabled on interfaces with PortFast already enabled
-
-```
-Switch(config)#spanning-tree portfast bpduguard default
-```
+- `Switch(config)#spanning-tree portfast bpduguard default`
+- Only gets enabled on interfaces with PortFast already enabled
 
 Enable **or** disable per interface:
-
-```
-Switch(config)#interface <x>
-Switch(config-if)#spanning-tree bpduguard <enable|disable>
-```
+- `Switch(config-if)#spanning-tree bpduguard <enable|disable>`
 
 ### Troubleshooting
 
-Display VLAN STP overview:
+STP issues:
+1. **TODO**
+
+Example troubleshooting output:
 
 ```
 Switch#show spanning-tree vlan 1
@@ -304,8 +268,6 @@ Gi0/1            Root FWD 4         128.25   P2p
 Gi0/2            Desg FWD 4         128.26   P2p
 ```
 
-Display per VLAN _local_ bridge ID settings:
-
 ```
 Switch#show spanning-tree bridge
                                                    Hello  Max  Fwd
@@ -315,8 +277,6 @@ VLAN0001         28673(28672,    1) 0019.e86a.1180    2    20   15  ieee
 VLAN0022         32790(32768,   22) 0019.e86a.1180    2    20   15  ieee
 VLAN0045         32813(32768,   45) 0019.e86a.1180    2    20   15  ieee
 ```
-
-Display per VLAN root bridge ID details:
 
 ```
 Switch#show spanning-tree root
@@ -328,16 +288,12 @@ VLAN0022         32790 0019.e86a.1180         0    2   20  15
 VLAN0045         32813 0019.e86a.1180         0    2   20  15
 ```
 
-Display per VLAN interface portFast setting:
-
 ```
 Switch#show spanning-tree interface FastEthernet 0/1 portFast
 VLAN0001                                       disabled
 VLAN0002                                       disabled
 VLAN0045                                       disabled
 ```
-
-Display per VLAN interface STP settings:
 
 ```
 Switch#show spanning-tree interface FastEthernet 0/1
@@ -347,8 +303,6 @@ VLAN0001            Desg FWD 19        128.1    P2p
 VLAN0002            Desg FWD 19        128.1    P2p
 VLAN0045            Desg FWD 19        128.1    P2p
 ```
-
-Check for BPDU Guard status:
 
 ```
 Switch#show spanning-tree interface FastEthernet 0/11 detail
@@ -368,13 +322,10 @@ Port 11(FastEthernet0/11) of VLAN0001 is designated forwarding
 ## EtherChannel (Layer 2)
 
 Define static channel:
-
-- ```
-  Switch(config)#interface range <x>
-  Switch(config-if-range)#channel-group <x> mode on
-  ```
+- `Switch(config-if-range)#channel-group <number> mode on`
 
 Define dynamic channel (PAgP - Cisco Proprietary):
+- `Switch(config-if-range)#channel-group <number> mode <desirable|auto>`
 
 |             | `on`        | `desirable` | `auto`      |
 | ----------- | ----------- | ----------- | ----------- |
@@ -382,12 +333,8 @@ Define dynamic channel (PAgP - Cisco Proprietary):
 | `desirable` | !!! BAD !!! | Y           | Y           |
 | `auto`      | !!! BAD !!! | Y           | N           |
 
-- ```
-  Switch(config)#interface range <x>
-  Switch(config-if-range)#channel-group <x> mode <desirable|auto>
-  ```
-
 Define dynamic channel (LACP - IEEE 802.3ad):
+- `Switch(config-if-range)#channel-group <number> mode <passive|active>`
 
 |           | `on`        | `active`    | `passive`   |
 | --------- | ----------- | ----------- | ----------- |
@@ -395,14 +342,12 @@ Define dynamic channel (LACP - IEEE 802.3ad):
 | `active`  | !!! BAD !!! | Y           | Y           |
 | `passive` | !!! BAD !!! | Y           | N           |
 
-- ```
-  Switch(config)#interface range <x>
-  Switch(config-if-range)#channel-group <x> mode <passive|active>
-  ```
-
 ### Troubleshooting
 
-Display status:
+Etherchannel issues:
+1. **TODO**
+
+Example troubleshooting output:
 
 ```
 Switch#show etherchannel summary
@@ -424,61 +369,63 @@ Group  Port-channel  Protocol        Ports
 
 Enable with a process ID:
 - `Router(config)#router ospf <process-id>`
-  - _NOTE:_ `process-id` needs to be **locally** unique
+  - `process-id` needs to be **locally** unique
 
 Define max number of OSPF routes used for equal cost load balancing:
 - `Router(config-router)#maximum-paths <max>`
-  - _NOTE:_ default `max` is 4
-  - _NOTE:_ set `max` to 1 to disable load balancing
+  - Default `max` is 4
+  - Set `max` to 1 to disable load balancing
 
 Define a passive OSPF interface:
 - `Router(config-router)#passive-interface <interface>`
-- _NOTE:_ can also enable globally:
+- Can also enable globally:
   - `Router(config-router)#passive-interface default`
   - `Router(config-router)#no passive-interface <interface>`
 
 Specify OSPF to advertise a default route:
 - `Router(config-router)#default-information originate [always]`
-  - _NOTE:_ `always` option means advertise a default route even if one does not exist
+  - `always` option means advertise a default route even if one does not exist
 
 Specify interfaces to advertise/learn on:
 - `Router(config-router)#network <network> <wildcard> area <area>`
-  - _NOTE:_ if an interface matches 2 different `network` statements, the first one that was configured is used as the area and mask
+  - If an interface matches 2 different `network` statements, the first one that was configured is used as the area and mask
 - `Router(config-if)#ip ospf <process-id> area <area>`
-  - _NOTE:_ interface ospf area configuration is prefered over the `network` command if both are configured and match an interface
+  - Interface ospf area configuration is prefered over the `network` command if both are configured and match an interface
 
 Manually specify Router ID (RID):
 - `Router(config-router)#router-id <rid>`
-  - _NOTE:_ RID selection priority ranking:
+  - RID selection priority ranking:
     1. `router-id` command value
     2. Highest Loopback interface IP (does not need to be OSPF enabled!)
     3. Highest interface IP (does not need to be OSPF enabled!)
-  - _NOTE:_ changing RID at runtime requires OSPF neighbor discovery to be restarted:
+  - Changing RID at runtime requires OSPF neighbor discovery to be restarted:
     - `Router# clear ip ospf process`
     - `Router# reload`
 
 Adjusting timers:
 - Hello timer: `Router(config-if)#ip ospf hello-interval <seconds>`
-  - _NOTE:_ default is 10 seconds for Ethernet interfaces
-  - _NOTE:_ default is 30 seconds for Serial interfaces
+  - Default is 10 seconds for Ethernet interfaces
+  - Default is 30 seconds for Serial interfaces
 - Dead timer: `Router(config-if)#ip ospf dead-interval <seconds>`
-  - _NOTE:_ default is 4 * hello timer value
+  - Default is 4 * hello timer value
 
 ### Cost
 
 Adjusting interface cost:
 - Manually:
+  
   - `Router(config-if)#ip ospf cost <cost>`
 - By interface bandwidth:
   - `Router(config-if)#bandwidth <bandwidth in Kbps>`
-    - _NOTE:_ find interface default bandwidth in Kbps:
+    - Find interface default bandwidth in Kbps:
       - `Router#show interface <int>`
 - By reference bandwidth:
   - `Router(config-router)#auto-cost reference-bandwidth <bandwidth in Mbps>`
-    - _NOTE:_ default is 100000 bps or 100 Mbps
-- _NOTE:_ cost equation: 
+    - Default is 100000 bps or 100 Mbps
+- Cost equation: 
+  
   - `cost = (reference bandwidth / interface bandwidth)`
-- _NOTE:_ default costs:
+- Default costs:
 
   | Link Type        | Default Bandwidth | Cost |
   | ---------------- | ----------------- | ---- |
@@ -643,52 +590,52 @@ LinkID        	ADV Router    	Age  	Seq#         	CheckSum  	Link count
 
 Enable with an ASN:
 - `Router(config)#router eigrp <asn>`
-  - _NOTE:_ `asn` needs to be **globally** unique
+  - `asn` needs to be **globally** unique
 
 Define max number of EIGRP routes used for _equal cost_ load balancing:
 - `Router(config-router)#maximum-paths <max>`
-  - _NOTE:_ default `max` is 4
-  - _NOTE:_ set `max` to 1 to disable load ballancing
+  - Default `max` is 4
+  - Set `max` to 1 to disable load ballancing
 
 Enable _unequal cost_ load balancing:
 - `Router(config-router)#variance <x>`
-  - _NOTE:_ applies to _all_ EIGRP routes with a sucessor (S) and feasible sucessor (FS) in the topology table
-  - _NOTE:_ allows for FS routes with a `FD(FS) < (variance * FD(S))` to be added to the routing table
-  - _NOTE:_ does **not** add other non-FS routes into the routing table even if they meet the criteria
+  - Applies to _all_ EIGRP routes with a sucessor (S) and feasible sucessor (FS) in the topology table
+  - Allows for FS routes with a `FD(FS) < (variance * FD(S))` to be added to the routing table
+    - FD is feasible distance
 
 Define a passive EIGRP interface:
 - `Router(config-router)#passive-interface <interface>`
-- _NOTE:_ can also enable globally:
+- Can also enable globally:
   - `Router(config-router)#passive-interface default`
   - `Router(config-router)#no passive-interface <interface>`
 
 Specify interfaces to advertise/learn on:
 - `Router(config-router)#network <network> <wildcard>`
-- _NOTE:_ Can also configure using classfull network ID:
+- Can also configure using classful network ID:
   - `Router(config-router)#network <classfull-network>`
 
 Manually specify Router ID (RID):
 - `Router(config-router)#eigrp router-id <rid>`
-  - _NOTE:_ RID selection priority ranking:
-    1. `router-id` command value
+  - RID selection priority ranking:
+    1. `eigrp router-id` command value
     2. Highest Loopback interface IP (does not need to be EIGRP enabled!)
     3. Highest interface IP (does not need to be EIGRP enabled!)
 
 Enable auto-summarization:
 - `Router(config-router)#auto-summary`
-  - _NOTE:_ not enabled by default
+  - Not enabled by default
 
 Define timers:
 - Hello timer: `Router(config-if)#ip hello-interval eigrp <asn> <seconds>`
-  - _NOTE:_ default for Ethernet interfaces is 5 seconds
-  - _NOTE:_ default for Serial interfaces is 60 seconds
+  - Default for Ethernet interfaces is 5 seconds
+  - Default for Serial interfaces is 60 seconds
 - Hold timer: `Router(config-if)#ip hold-time eigrp <asn> <seconds>`
-  - _NOTE:_ default is 3 * hello timer value
-  - _NOTE:_ value does _not_ change in sync when changing the hello timer directly
+  - Default is 3 * hello timer value
+  - Value does _not_ change in sync when changing the hello timer directly
 
 ### Metric
 
-Metric equation with default K values:
+Metric equation with _default_ K values:
 - `metric = 256 * (((10^7) / smallest_bandwidth) + cumulative_delay)`
 - Default K values:
   - K1 (Bandwidth) = 1
@@ -699,13 +646,11 @@ Metric equation with default K values:
 
 Modify bandwidth:
 - `Router(config-if)#bandwidth <bandwidth in Kbps>`
-  - _NOTE:_ default bandwidth can be seen with `Router#show int <int>`
-  - _NOTE:_ is enabled with default K values
+  - Default bandwidth can be seen with `Router#show int <int>`
 
 Modify delay:
 - `Router(config-if)#delay <delay in 10s of microseconds>`
-  - _NOTE:_ default delay can be seen with `Router#show int <int>`
-  - _NOTE:_ is enabled with default K values
+  - Default delay can be seen with `Router#show int <int>`
 
 ### Troubleshooting
 
@@ -825,21 +770,425 @@ D    192.168.30.0/24 [90/2172416] via 192.0.2.6, 00:17:25, Serial0/0/1
 D    192.168.40.0/24 [90/2172416] via 192.0.2.10, 00:17:22, Serial0/1/0
 ```
 
+## BGP
 
+Enable with an ASN:
 
+- `Router(config)#router bgp <asn>`
+  - `asn` needs to be **globally** unique
 
+Define a remote AS to connect with as a neighbor:
 
+- `Router(config-router)#neighbor <neighbor-ip> remote-as <neighbor-asn>`
 
+Manually specify Router ID (RID):
 
+- `Router(config-router)#bgp router-id <rid>`
+  - RID selection priority ranking:
+    1. `bgp router-id` command value
+    2. Highest Loopback interface IP
+    3. Highest interface IP
 
+Specify internal networks to advertise over eBGP:
 
+- `Router(config-router)#network <network> mask <mask>`
+- Can also configure using _classful_ network ID:
+  - `Router(config-router)#network <classful-network>`
+- A route to the network being advertised **must be in the local routing table** in order for it to be advertised over eBGP
 
+### Troubleshooting
 
+BGP issues:
 
+1. No BGP neighbors?
+   1. Is the local interface up&up?
+   2. Any ACLs blocking TCP port 179?
+   3. `remote-as` value in `neighbor` command wrong?
+   4. Neighbor IP in `neighbor` command wrong?
+   5. Neighbor IPs or local IP in the wrong subnet?
+2. No BGP external routes?
+   1. Bad subnet defined in `network` command?
+   2. Advertised subnet not in local routing table?
+      1. May need a discard route: `ip route <network> <mask> null0`
 
+Example troubleshooting output:
 
+```
+Router#show ip bgp summary 
+BGP Router identifier 200.200.200.4 , local AS number 400 
+BGP table version is 7, main routing table version 7 
+4 network entries using 592 bytes of memory. 
+4 path entires using 256 bytes of memory. 
+4/4 BGP path/bestpath attribute entries using 544 bytes of memory 
+1 BGP AS-PATH entries using 24 bytes of memory 
+0 BGP route map cache entries using 0 bytes of memory 
+0 BGP filter-list cache entires using 0 bytes of memory 
+BGP using 1416 total bytes of memory  
+BGP activity 4/0 prefixes, 4/0 paths, scan interval 60 secs 
 
+Neighbor       V  AS   MsgRcvd  MsgSent  TblVer  InQ  OutQ  Up/Down   State/PfxRcd  
+200.200.200.1  4  100  26       26       3       0    0     00:21:54  1             
+200.200.200.2  4  200  26       26       3       0    0     00:21:53  1             
+200.200.200.3  4  300  26       26       3       0    0     00:21:53  1    
+```
 
+```
+Router#show ip route
+
+Codes: L - local, C - connected, S - static, R - RIP, M - mobile, B - BGP
+       D - EIGRP, EX - EIGRP external, O - OSPF, IA - OSPF inter area
+       N1 - OSPF NSSA external type 1, N2 - OSPF NSSA external type 2
+       E1 - OSPF external type 1, E2 - OSPF external type 2
+       i - IS-IS, su - IS-IS summary, L1 - IS-IS level-1, L2 - IS-IS level-2
+       ia - IS-IS inter area, * - candidate default, U - per-user static route
+       o - ODR, P - periodic downloaded static route, H - NHRP, l - LISP
+       + - replicated route, % - next hop override
+
+Gateway of last resort is not set
+
+     192.168.1.0/24 is variably subnetted, 5 subnets, 5 masks
+B    192.168.1.0/25 [20/0] via 200.200.200.1, 00:14:54
+B    192.168.1.128/26 [20/0] via 200.200.200.2, 00:14:27
+B    192.168.1.192/27 [20/0] via 200.200.200.3, 00:12:47
+C       192.168.1.224/28 is directly connected, GigabitEthernet0/1
+L       192.168.1.225/32 is directly connected, GigabitEthernet0/1
+     200.200.200.0/24 is variably subnetted, 2 subnets, 2 masks
+C       200.200.200.0/29 is directly connected, GigabitEthernet0/0
+L       200.200.200.4/32 is directly connected, GigabitEthernet0/0
+```
+
+```
+Router#show ip bgp
+BGP table version is 3, local router ID is 200.200.200.4 
+Status Codes: s suppressed, d damped, h history, * valid, > best, i - internal, 
+              r RIB-Failure, S stale, m multipath, b backup-path, f RT-Filter, 
+              x best-external, a additional-path, c RIB-compressed, 
+Origin codes: i - IGP, e - EGP, ? - incomplete 
+RPKI validation codes: V valid, I invalid, N Not found 
+
+    Network        Next Hop       Metric  LocPrf  Weight  Path   
+*>  192.168.1.0    200.200.200.1  0               0       100 i  
+*>  192.168.1.128  200.200.200.2  0               0       200 i  
+*>  192.168.1.224  0.0.0.0        0               32768   i      
+*>  192.168.1.192  200.200.200.3  0               0       300 i  
+```
+
+```
+Router#show ip bgp neighbors 
+BGP neighbor is 200.200.200.1, remote AS 100, external link 
+  BGP version 4, remote router ID 200.200.200.1 
+  BGP state = ESTABLISHED, up for 00:22:04 
+  Last read = 00:00:29, last write 00:00:29, hold time is 180, keepalive interval is 60 seconds 
+  Neighbor sessions: 
+    1 active, is not multisession capable  (disabled). 
+  Neighbor capabilities: 
+    Route refresh: advertised and received(new) 
+    Four-octets ASN Capability: advertised and received 
+    Address family IPv4 Unicast: advertised and received 
+    Enhanced Refresh Capability: advertised and received 
+    Multisession Capability: 
+    Stateful switchover support enabled: NO for session 1 
+  Message statistics: 
+    InQ depth is 0 
+    OutQ depth is 0 
+
+                    Sent  Rcvd  
+    Opens:          1     1     
+    Notifications:  0     0     
+    Updates:        2     2     
+    Keepalives:     2     2     
+    Route Refresh:  0     0     
+    Total:          5     5     
+  Default minimum time between advertisement runs is 30 seconds 
+
+For address family: IPv4 Unicast 
+  Session:200.200.200.1 
+  BGP table version3, neighbor version 3/0 
+  Output queue size : 0 
+  Index 1, Advertise bit 0 
+  1 update-group member 
+  Slow-peer detection is disabled 
+  Slow-peer split-update-group dynamic is disabled 
+                                 Sent      Rcvd      
+  Prefix activity:               ----      ----      
+      Prefix Current:              1         1         
+      Prefixes Total:              1         1         
+      Implicit Withdraw:           0         0         
+      Explicit Withdraw:           0         0         
+      Used as bestpath:            0         0         
+      Used as multipath:           0         0         
+                                   Outbound  Inbound   
+    Local Policy Denied Prefixes:  --------  --------  
+      Bestpath from this peer:     1         0         
+      Total:                       1         0         
+  Number of NLRIs in the update sent: max 0, min 0 
+  Last detected as dynamic slow peer: never 
+  Dynamic slow peer recovered: never 
+  Refresh Epoch: 1 
+  Last Sent Refresh Start-of-rib: never 
+  Last Sent Refresh End-of-rib: never 
+  Last Received Refresh Start-of-rib: never 
+  Last Received Refresh End-of-rib: never 
+                                   Sent  Rcvd  
+          Refresh Activity:        ----  ----  
+              Refresh Start of RIB:  0     0     
+              Refresh End of RIB:    0     0     
+  
+Address tracking is enabled, the RIB does have a route to 200.200.200.1 
+  Connections established 1; dropped 0 
+  Last reset never 
+  Transport(tcp) path-mtu-discovery is enabled 
+  Graceful-Restart is disabled 
+Connection state is ESTAB, I/O status: 1, unread input bytes: 0 
+Connection is ECN Disabled, Mininum incoming TTL 0, Outgoing TTL 1 
+Local host: 192.168.1.225, Local port: 179 
+Foreign host: 200.200.200.1, Foreign port: 58251 
+Connection tableid (VRF): 0 
+Maximum output segment queue size: 50 
+
+Enqueued packets for retransmit: 0, input: 0  mis-ordered: 0 (0 bytes) 
+
+Event Timers (current time is 0x4DC0841C): 
+Timer      Starts  Wakeups  Next  
+Retrans    3       0        0x0   
+TimeWait   0       0        0x0   
+AckHold    3       0        0x0   
+SendWnd    0       0        0x0   
+KeepAlive  0       0        0x0   
+GiveUp     0       0        0x0   
+PmtuAger   0       0        0x0   
+DeadWait   0       0        0x0   
+Linger     0       0        0x0   
+ProcessQ   0       0        0x0   
+
+iss: 4153197359  snduna: 4153197478  sndnxt: 4153197478 
+irs: 3201954199  rcvnxt: 3201954318 
+
+sndwnd:  16266  scale:      0  maxrcvwnd:  16384 
+rcvwnd:  16266  scale:      0  delrcvwnd:    118 
+
+SRTT: 330 ms, RTTO: 3159 ms, RTV: 2829 ms, KRTT: 0 ms 
+minRTT: 0 ms, maxRTT: 1000 ms, ACK hold: 200 ms 
+Status Flags: passive open, gen tcbs 
+IP Precedence value : 6 
+
+Datagrams (max data segment is 1460 bytes): 
+Rcvd: 8 (out of order: 0), with data: 4, total data bytes: 118 
+Sent: 7 (retransmit: 0, fastretransmit: 0, partialack: 0, Second Congestion: 
+0), with data: 4, total data bytes: 118 
+
+  Packets received in fast path: 0, fast processed: 0, slow path: 0 
+  fast lock acquisition failures: 0, slow path: 0 
+TCP Semaphore      0x30CD7404  FREE 
+BGP neighbor is 200.200.200.2, remote AS 200, external link 
+  BGP version 4, remote router ID 200.200.200.2 
+  BGP state = ESTABLISHED, up for 00:22:03 
+  Last read = 00:00:29, last write 00:00:29, hold time is 180, keepalive interval is 60 seconds 
+  Neighbor sessions: 
+    1 active, is not multisession capable  (disabled). 
+  Neighbor capabilities: 
+    Route refresh: advertised and received(new) 
+    Four-octets ASN Capability: advertised and received 
+    Address family IPv4 Unicast: advertised and received 
+    Enhanced Refresh Capability: advertised and received 
+    Multisession Capability: 
+    Stateful switchover support enabled: NO for session 1 
+  Message statistics: 
+    InQ depth is 0 
+    OutQ depth is 0 
+
+                    Sent  Rcvd  
+    Opens:          1     1     
+    Notifications:  0     0     
+    Updates:        2     2     
+    Keepalives:     2     2     
+    Route Refresh:  0     0     
+    Total:          5     5     
+  Default minimum time between advertisement runs is 30 seconds 
+
+For address family: IPv4 Unicast 
+  Session:200.200.200.2 
+  BGP table version3, neighbor version 3/0 
+  Output queue size : 0 
+  Index 1, Advertise bit 0 
+  1 update-group member 
+  Slow-peer detection is disabled 
+  Slow-peer split-update-group dynamic is disabled 
+                                 Sent      Rcvd      
+  Prefix activity:               ----      ----      
+      Prefix Current:              1         1         
+      Prefixes Total:              1         1         
+      Implicit Withdraw:           0         0         
+      Explicit Withdraw:           0         0         
+      Used as bestpath:            0         0         
+      Used as multipath:           0         0         
+                                   Outbound  Inbound   
+      Bestpath from this peer:     1         0         
+      Total:                       1         0         
+  Number of NLRIs in the update sent: max 0, min 0 
+  Last detected as dynamic slow peer: never 
+  Dynamic slow peer recovered: never 
+  Refresh Epoch: 1 
+  Last Sent Refresh Start-of-rib: never 
+  Last Sent Refresh End-of-rib: never 
+  Last Received Refresh Start-of-rib: never 
+  Last Received Refresh End-of-rib: never 
+                                   Sent  Rcvd  
+          Refresh Activity:        ----  ----  
+              Refresh Start of RIB:  0     0     
+              Refresh End of RIB:    0     0     
+  
+Address tracking is enabled, the RIB does have a route to 200.200.200.2 
+  Connections established 1; dropped 0 
+  Last reset never 
+  Transport(tcp) path-mtu-discovery is enabled 
+  Graceful-Restart is disabled 
+Connection state is ESTAB, I/O status: 1, unread input bytes: 0 
+Connection is ECN Disabled, Mininum incoming TTL 0, Outgoing TTL 1 
+Local host: 192.168.1.225, Local port: 179 
+Foreign host: 200.200.200.2, Foreign port: 58251 
+Connection tableid (VRF): 0 
+Maximum output segment queue size: 50 
+
+Enqueued packets for retransmit: 0, input: 0  mis-ordered: 0 (0 bytes) 
+
+Event Timers (current time is 0x4DC0841C): 
+Timer      Starts  Wakeups  Next  
+Retrans    3       0        0x0   
+TimeWait   0       0        0x0   
+AckHold    3       0        0x0   
+SendWnd    0       0        0x0   
+KeepAlive  0       0        0x0   
+GiveUp     0       0        0x0   
+PmtuAger   0       0        0x0   
+DeadWait   0       0        0x0   
+Linger     0       0        0x0   
+ProcessQ   0       0        0x0   
+
+iss: 4153197359  snduna: 4153197478  sndnxt: 4153197478 
+irs: 3201954199  rcvnxt: 3201954318 
+
+sndwnd:  16266  scale:      0  maxrcvwnd:  16384 
+rcvwnd:  16266  scale:      0  delrcvwnd:    118 
+
+SRTT: 330 ms, RTTO: 3159 ms, RTV: 2829 ms, KRTT: 0 ms 
+minRTT: 0 ms, maxRTT: 1000 ms, ACK hold: 200 ms 
+Status Flags: passive open, gen tcbs 
+
+Datagrams (max data segment is 1460 bytes): 
+Rcvd: 8 (out of order: 0), with data: 4, total data bytes: 118 
+Sent: 7 (retransmit: 0, fastretransmit: 0, partialack: 0, Second Congestion: 
+0), with data: 4, total data bytes: 118 
+
+  Packets received in fast path: 0, fast processed: 0, slow path: 0 
+  fast lock acquisition failures: 0, slow path: 0 
+TCP Semaphore      0x30CD7404  FREE 
+BGP neighbor is 200.200.200.3, remote AS 300, external link 
+  BGP version 4, remote router ID 200.200.200.3 
+  BGP state = ESTABLISHED, up for 00:22:03 
+  Last read = 00:00:29, last write 00:00:29, hold time is 180, keepalive interval is 60 seconds 
+  Neighbor sessions: 
+    1 active, is not multisession capable  (disabled). 
+  Neighbor capabilities: 
+    Route refresh: advertised and received(new) 
+    Four-octets ASN Capability: advertised and received 
+    Address family IPv4 Unicast: advertised and received 
+    Enhanced Refresh Capability: advertised and received 
+    Multisession Capability: 
+    Stateful switchover support enabled: NO for session 1 
+  Message statistics: 
+    InQ depth is 0 
+    OutQ depth is 0 
+
+                    Sent  Rcvd  
+    Opens:          1     1     
+    Notifications:  0     0     
+    Updates:        2     2     
+    Keepalives:     2     2     
+    Route Refresh:  0     0     
+    Total:          5     5     
+  Default minimum time between advertisement runs is 30 seconds 
+
+For address family: IPv4 Unicast 
+  Session:200.200.200.3 
+  BGP table version3, neighbor version 3/0 
+  Output queue size : 0 
+  Index 1, Advertise bit 0 
+  1 update-group member 
+  Slow-peer detection is disabled 
+  Slow-peer split-update-group dynamic is disabled 
+                                 Sent      Rcvd      
+  Prefix activity:               ----      ----      
+      Prefix Current:              1         1         
+      Prefixes Total:              1         1         
+      Implicit Withdraw:           0         0         
+      Explicit Withdraw:           0         0         
+      Used as bestpath:            0         0         
+      Used as multipath:           0         0         
+                                   Outbound  Inbound   
+    Local Policy Denied Prefixes:  --------  --------  
+      Bestpath from this peer:     1         0         
+      Total:                       1         0         
+  Number of NLRIs in the update sent: max 0, min 0 
+  Last detected as dynamic slow peer: never 
+  Dynamic slow peer recovered: never 
+  Refresh Epoch: 1 
+  Last Sent Refresh Start-of-rib: never 
+  Last Sent Refresh End-of-rib: never 
+  Last Received Refresh Start-of-rib: never 
+  Last Received Refresh End-of-rib: never 
+                                   Sent  Rcvd  
+          Refresh Activity:        ----  ----  
+              Refresh Start of RIB:  0     0     
+              Refresh End of RIB:    0     0     
+  
+Address tracking is enabled, the RIB does have a route to 200.200.200.3 
+  Connections established 1; dropped 0 
+  Last reset never 
+  Transport(tcp) path-mtu-discovery is enabled 
+  Graceful-Restart is disabled 
+Connection state is ESTAB, I/O status: 1, unread input bytes: 0 
+Connection is ECN Disabled, Mininum incoming TTL 0, Outgoing TTL 1 
+Local host: 192.168.1.225, Local port: 179 
+Foreign host: 200.200.200.3, Foreign port: 58251 
+Connection tableid (VRF): 0 
+Maximum output segment queue size: 50 
+
+Enqueued packets for retransmit: 0, input: 0  mis-ordered: 0 (0 bytes) 
+
+Event Timers (current time is 0x4DC0841C): 
+Timer      Starts  Wakeups  Next  
+Retrans    3       0        0x0   
+TimeWait   0       0        0x0   
+AckHold    3       0        0x0   
+SendWnd    0       0        0x0   
+KeepAlive  0       0        0x0   
+GiveUp     0       0        0x0   
+PmtuAger   0       0        0x0   
+DeadWait   0       0        0x0   
+Linger     0       0        0x0   
+ProcessQ   0       0        0x0   
+
+iss: 4153197359  snduna: 4153197478  sndnxt: 4153197478 
+irs: 3201954199  rcvnxt: 3201954318 
+
+sndwnd:  16266  scale:      0  maxrcvwnd:  16384 
+rcvwnd:  16266  scale:      0  delrcvwnd:    118 
+
+SRTT: 330 ms, RTTO: 3159 ms, RTV: 2829 ms, KRTT: 0 ms 
+minRTT: 0 ms, maxRTT: 1000 ms, ACK hold: 200 ms 
+Status Flags: passive open, gen tcbs 
+IP Precedence value : 6 
+
+Datagrams (max data segment is 1460 bytes): 
+Rcvd: 8 (out of order: 0), with data: 4, total data bytes: 118 
+Sent: 7 (retransmit: 0, fastretransmit: 0, partialack: 0, Second Congestion: 
+0), with data: 4, total data bytes: 118 
+
+  Packets received in fast path: 0, fast processed: 0, slow path: 0 
+  fast lock acquisition failures: 0, slow path: 0 
+TCP Semaphore      0x30CD7404  FREE 
+```
 
 
 
