@@ -25,7 +25,12 @@ Define on an interface:
 
 ### Troubleshooting
 
+Issues:
+
+**TODO**
+
 Example troubleshooting output:
+
 ```
 Switch#show vlan summary
 Number of existing VLANs          : 3
@@ -104,7 +109,7 @@ Disable all auto negotiation (trunk protocol negotiation **and** operational mod
 
 ### Troubleshooting
 
-Trunk issues:
+Common Issues:
 
 1. VLAN not allowed on trunk?
 2. Bad DTP paramaters (eg `auto`&`auto` or `access`&`desirable`)?
@@ -172,13 +177,16 @@ Enable VTP pruning:
 
 ### Troubleshooting
 
-VTP issues:
+Common Issues:
 1. Passwords don't match (check MD5 digest)?
-2. VTP domain names don't match (these are case sensitive!)?
-2. VTP operating modes don't match?
-3. VLANs not syncing?
-   1. Check revision number (highest revision number wins!)?
-   2. Check VTP pruning (maybe the VLANs are not supposed to be there)?
+2. VTP domain names don't match?
+   1. These are case sensitive!
+3. VTP operating modes don't match?
+4. VLANs not syncing?
+   1. Check revision number?
+      1. Highest revision number wins!
+   2. Check VTP pruning?
+      1. Maybe the VLANs are not supposed to be there in the first place...
 
 Example troubleshooting output:
 
@@ -242,7 +250,7 @@ Enable **or** disable per interface:
 
 ### Troubleshooting
 
-STP issues:
+Common Issues:
 1. **TODO**
 
 Example troubleshooting output:
@@ -344,7 +352,7 @@ Define dynamic channel (LACP - IEEE 802.3ad):
 
 ### Troubleshooting
 
-Etherchannel issues:
+Common Issues:
 1. **TODO**
 
 Example troubleshooting output:
@@ -440,9 +448,9 @@ Adjusting interface cost:
 
 ### Troubleshooting
 
-OSPF issues:
+Common Issues:
 
-1. No OSPF neighbors
+1. No OSPF neighbors...
    1. Authentication values incorrect?
    2. Local interfaces not in an up&up state?
    3. OSPF neighbor interfaces not in the same subnet?
@@ -451,10 +459,11 @@ OSPF issues:
    6. Non-unique RIDs?
    7. Areas do not match?
    8. MTUs do not match?
-2. Bad area design
+2. Bad area design...
    1. Interfaces in the same subnet but also in different areas?
-   2. Current area not touching an area border router (ABR) to have an interface in the backbone area (area 0)?
-3. Passive interfaces
+   2. Current area not touching an area border router (ABR)?
+      1. Unless using a virtual link, all areas must have a connection to the backbone area (area 0)
+3. Passive interfaces...
    1. `show ip ospf interface brief` shows even passive interfaces!
       - Use `show ip protocols` to deconflict
 
@@ -635,6 +644,8 @@ Define timers:
 
 ### Metric
 
+![EIGRP Metric](https://www.practicalnetworking.net/wp-content/uploads/2016/04/eigrp-metric.png)
+
 Metric equation with _default_ K values:
 - `metric = 256 * (((10^7) / smallest_bandwidth) + cumulative_delay)`
 - Default K values:
@@ -654,21 +665,21 @@ Modify delay:
 
 ### Troubleshooting
 
-EIGRP issues:
+Common Issues:
 
-1. No EIGRP neighbors
+1. No EIGRP neighbors...
    1. Authentication values incorrect?
    2. Local interfaces not in an up&up state?
    3. EIGRP neighbor interfaces not in the same subnet?
    4. ACL blocking routing protocol packets to 224.0.0.10?
    5. EIGRP neighbors not in same ASN?
    6. K-values do not match?
-2. EIGRP neighbors can't stay up
-   1. Hello timer values > neighbor hold timers?
-3. Passive interfaces
+2. EIGRP neighbors can't stay up...
+   1. Local hello timer value greater than neighbor's hold timer value?
+3. Passive interfaces...
    1. `show ip eigrp interfaces` shows only active interfaces
       - Use `show ip protocols` to see passive interfaces
-4. Auto summarization issues
+4. Auto summarization issues...
    1. Any discontiguous networks?
 
 Example troubleshooting output:
@@ -798,18 +809,18 @@ Specify internal networks to advertise over eBGP:
 
 ### Troubleshooting
 
-BGP issues:
+Common Issues:
 
-1. No BGP neighbors?
+1. No BGP neighbors...
    1. Is the local interface up&up?
    2. Any ACLs blocking TCP port 179?
    3. `remote-as` value in `neighbor` command wrong?
    4. Neighbor IP in `neighbor` command wrong?
    5. Neighbor IPs or local IP in the wrong subnet?
-2. No BGP external routes?
+2. No BGP external routes...
    1. Bad subnet defined in `network` command?
    2. Advertised subnet not in local routing table?
-      1. May need a discard route: `ip route <network> <mask> null0`
+      1. May need to use a discard route: `ip route <network> <mask> null0`
 
 Example troubleshooting output:
 
@@ -874,7 +885,7 @@ RPKI validation codes: V valid, I invalid, N Not found
 ```
 
 ```
-Router#show ip bgp neighbors 
+Router#show ip bgp neighbors 200.200.200.1
 BGP neighbor is 200.200.200.1, remote AS 100, external link 
   BGP version 4, remote router ID 200.200.200.1 
   BGP state = ESTABLISHED, up for 00:22:04 
@@ -980,215 +991,226 @@ Sent: 7 (retransmit: 0, fastretransmit: 0, partialack: 0, Second Congestion:
   Packets received in fast path: 0, fast processed: 0, slow path: 0 
   fast lock acquisition failures: 0, slow path: 0 
 TCP Semaphore      0x30CD7404  FREE 
-BGP neighbor is 200.200.200.2, remote AS 200, external link 
-  BGP version 4, remote router ID 200.200.200.2 
-  BGP state = ESTABLISHED, up for 00:22:03 
-  Last read = 00:00:29, last write 00:00:29, hold time is 180, keepalive interval is 60 seconds 
-  Neighbor sessions: 
-    1 active, is not multisession capable  (disabled). 
-  Neighbor capabilities: 
-    Route refresh: advertised and received(new) 
-    Four-octets ASN Capability: advertised and received 
-    Address family IPv4 Unicast: advertised and received 
-    Enhanced Refresh Capability: advertised and received 
-    Multisession Capability: 
-    Stateful switchover support enabled: NO for session 1 
-  Message statistics: 
-    InQ depth is 0 
-    OutQ depth is 0 
-
-                    Sent  Rcvd  
-    Opens:          1     1     
-    Notifications:  0     0     
-    Updates:        2     2     
-    Keepalives:     2     2     
-    Route Refresh:  0     0     
-    Total:          5     5     
-  Default minimum time between advertisement runs is 30 seconds 
-
-For address family: IPv4 Unicast 
-  Session:200.200.200.2 
-  BGP table version3, neighbor version 3/0 
-  Output queue size : 0 
-  Index 1, Advertise bit 0 
-  1 update-group member 
-  Slow-peer detection is disabled 
-  Slow-peer split-update-group dynamic is disabled 
-                                 Sent      Rcvd      
-  Prefix activity:               ----      ----      
-      Prefix Current:              1         1         
-      Prefixes Total:              1         1         
-      Implicit Withdraw:           0         0         
-      Explicit Withdraw:           0         0         
-      Used as bestpath:            0         0         
-      Used as multipath:           0         0         
-                                   Outbound  Inbound   
-      Bestpath from this peer:     1         0         
-      Total:                       1         0         
-  Number of NLRIs in the update sent: max 0, min 0 
-  Last detected as dynamic slow peer: never 
-  Dynamic slow peer recovered: never 
-  Refresh Epoch: 1 
-  Last Sent Refresh Start-of-rib: never 
-  Last Sent Refresh End-of-rib: never 
-  Last Received Refresh Start-of-rib: never 
-  Last Received Refresh End-of-rib: never 
-                                   Sent  Rcvd  
-          Refresh Activity:        ----  ----  
-              Refresh Start of RIB:  0     0     
-              Refresh End of RIB:    0     0     
-  
-Address tracking is enabled, the RIB does have a route to 200.200.200.2 
-  Connections established 1; dropped 0 
-  Last reset never 
-  Transport(tcp) path-mtu-discovery is enabled 
-  Graceful-Restart is disabled 
-Connection state is ESTAB, I/O status: 1, unread input bytes: 0 
-Connection is ECN Disabled, Mininum incoming TTL 0, Outgoing TTL 1 
-Local host: 192.168.1.225, Local port: 179 
-Foreign host: 200.200.200.2, Foreign port: 58251 
-Connection tableid (VRF): 0 
-Maximum output segment queue size: 50 
-
-Enqueued packets for retransmit: 0, input: 0  mis-ordered: 0 (0 bytes) 
-
-Event Timers (current time is 0x4DC0841C): 
-Timer      Starts  Wakeups  Next  
-Retrans    3       0        0x0   
-TimeWait   0       0        0x0   
-AckHold    3       0        0x0   
-SendWnd    0       0        0x0   
-KeepAlive  0       0        0x0   
-GiveUp     0       0        0x0   
-PmtuAger   0       0        0x0   
-DeadWait   0       0        0x0   
-Linger     0       0        0x0   
-ProcessQ   0       0        0x0   
-
-iss: 4153197359  snduna: 4153197478  sndnxt: 4153197478 
-irs: 3201954199  rcvnxt: 3201954318 
-
-sndwnd:  16266  scale:      0  maxrcvwnd:  16384 
-rcvwnd:  16266  scale:      0  delrcvwnd:    118 
-
-SRTT: 330 ms, RTTO: 3159 ms, RTV: 2829 ms, KRTT: 0 ms 
-minRTT: 0 ms, maxRTT: 1000 ms, ACK hold: 200 ms 
-Status Flags: passive open, gen tcbs 
-
-Datagrams (max data segment is 1460 bytes): 
-Rcvd: 8 (out of order: 0), with data: 4, total data bytes: 118 
-Sent: 7 (retransmit: 0, fastretransmit: 0, partialack: 0, Second Congestion: 
-0), with data: 4, total data bytes: 118 
-
-  Packets received in fast path: 0, fast processed: 0, slow path: 0 
-  fast lock acquisition failures: 0, slow path: 0 
-TCP Semaphore      0x30CD7404  FREE 
-BGP neighbor is 200.200.200.3, remote AS 300, external link 
-  BGP version 4, remote router ID 200.200.200.3 
-  BGP state = ESTABLISHED, up for 00:22:03 
-  Last read = 00:00:29, last write 00:00:29, hold time is 180, keepalive interval is 60 seconds 
-  Neighbor sessions: 
-    1 active, is not multisession capable  (disabled). 
-  Neighbor capabilities: 
-    Route refresh: advertised and received(new) 
-    Four-octets ASN Capability: advertised and received 
-    Address family IPv4 Unicast: advertised and received 
-    Enhanced Refresh Capability: advertised and received 
-    Multisession Capability: 
-    Stateful switchover support enabled: NO for session 1 
-  Message statistics: 
-    InQ depth is 0 
-    OutQ depth is 0 
-
-                    Sent  Rcvd  
-    Opens:          1     1     
-    Notifications:  0     0     
-    Updates:        2     2     
-    Keepalives:     2     2     
-    Route Refresh:  0     0     
-    Total:          5     5     
-  Default minimum time between advertisement runs is 30 seconds 
-
-For address family: IPv4 Unicast 
-  Session:200.200.200.3 
-  BGP table version3, neighbor version 3/0 
-  Output queue size : 0 
-  Index 1, Advertise bit 0 
-  1 update-group member 
-  Slow-peer detection is disabled 
-  Slow-peer split-update-group dynamic is disabled 
-                                 Sent      Rcvd      
-  Prefix activity:               ----      ----      
-      Prefix Current:              1         1         
-      Prefixes Total:              1         1         
-      Implicit Withdraw:           0         0         
-      Explicit Withdraw:           0         0         
-      Used as bestpath:            0         0         
-      Used as multipath:           0         0         
-                                   Outbound  Inbound   
-    Local Policy Denied Prefixes:  --------  --------  
-      Bestpath from this peer:     1         0         
-      Total:                       1         0         
-  Number of NLRIs in the update sent: max 0, min 0 
-  Last detected as dynamic slow peer: never 
-  Dynamic slow peer recovered: never 
-  Refresh Epoch: 1 
-  Last Sent Refresh Start-of-rib: never 
-  Last Sent Refresh End-of-rib: never 
-  Last Received Refresh Start-of-rib: never 
-  Last Received Refresh End-of-rib: never 
-                                   Sent  Rcvd  
-          Refresh Activity:        ----  ----  
-              Refresh Start of RIB:  0     0     
-              Refresh End of RIB:    0     0     
-  
-Address tracking is enabled, the RIB does have a route to 200.200.200.3 
-  Connections established 1; dropped 0 
-  Last reset never 
-  Transport(tcp) path-mtu-discovery is enabled 
-  Graceful-Restart is disabled 
-Connection state is ESTAB, I/O status: 1, unread input bytes: 0 
-Connection is ECN Disabled, Mininum incoming TTL 0, Outgoing TTL 1 
-Local host: 192.168.1.225, Local port: 179 
-Foreign host: 200.200.200.3, Foreign port: 58251 
-Connection tableid (VRF): 0 
-Maximum output segment queue size: 50 
-
-Enqueued packets for retransmit: 0, input: 0  mis-ordered: 0 (0 bytes) 
-
-Event Timers (current time is 0x4DC0841C): 
-Timer      Starts  Wakeups  Next  
-Retrans    3       0        0x0   
-TimeWait   0       0        0x0   
-AckHold    3       0        0x0   
-SendWnd    0       0        0x0   
-KeepAlive  0       0        0x0   
-GiveUp     0       0        0x0   
-PmtuAger   0       0        0x0   
-DeadWait   0       0        0x0   
-Linger     0       0        0x0   
-ProcessQ   0       0        0x0   
-
-iss: 4153197359  snduna: 4153197478  sndnxt: 4153197478 
-irs: 3201954199  rcvnxt: 3201954318 
-
-sndwnd:  16266  scale:      0  maxrcvwnd:  16384 
-rcvwnd:  16266  scale:      0  delrcvwnd:    118 
-
-SRTT: 330 ms, RTTO: 3159 ms, RTV: 2829 ms, KRTT: 0 ms 
-minRTT: 0 ms, maxRTT: 1000 ms, ACK hold: 200 ms 
-Status Flags: passive open, gen tcbs 
-IP Precedence value : 6 
-
-Datagrams (max data segment is 1460 bytes): 
-Rcvd: 8 (out of order: 0), with data: 4, total data bytes: 118 
-Sent: 7 (retransmit: 0, fastretransmit: 0, partialack: 0, Second Congestion: 
-0), with data: 4, total data bytes: 118 
-
-  Packets received in fast path: 0, fast processed: 0, slow path: 0 
-  fast lock acquisition failures: 0, slow path: 0 
-TCP Semaphore      0x30CD7404  FREE 
 ```
+
+## HDLC
+
+Enable HDLC on an interface:
+
+- `Router(config-if)#encapsulation hdlc`
+  - This is the _default_ encapuslation for serial interfaces
+
+Disable keepalive messages:
+
+- `Router(config-if)#no keepalive `
+  - Keepalives are enabled by default
+  - Sent every 10 seconds by default
+
+Define interface clock rate:
+
+- `Router(config-if)#clock rate <bps>`
+  - In units of bits per second
+  - Default is T1 speed (1544Kbps)
+
+Define interface bandwidth:
+
+- `Router(config-if)#bandwidth <Kbps>`
+  - In units of Kilo bits per second
+  - Default is T1 speed (1544Kbps)
+  - Has **no** effect on actual line speed. Used for routing protocol metric calculations.
+
+Common serial TDMA speeds:
+
+| Name        | Rate                            |
+| ----------- | ------------------------------- |
+| DS0         | 64 Kbps                         |
+| T1 (DS1)    | 1544 Kbps (24 DS0s + overhead)  |
+| T3 (DS3)    | 44736 Kbps (28 DS1s + overhead) |
+| E1 (Europe) | 2048 Kbps (32 DS0s + overhead)  |
+| E3 (Europe) | 32768 Kbps (16 E1s + overhead)  |
+
+### Troubleshooting
+
+Common Issues:
+
+1. Interface is up&down?
+   1. If other side is flipping between states, check for encapsulation miss match
+   2. If other side _stays up_, check for keepalive messages disabled on one side but not the other
+      1. Side showing up should be the one with keepalives disabled
+
+Example troubleshooting output:
+
+```
+Router#show controllers serial 0/0/0
+Interface Serial0/0/0
+Hardware is SCC
+DCE V.35, clock rate 256000
+```
+
+```
+Router#show interfaces serial 0/0/0
+Serial0/0/0 is up, line protocol is up
+  Hardware is GT96K Serial
+  Internet address is 10.100.0.1/12
+  MTU 1500 bytes, BW 1544 Kbit/sec, DLY 20000 usec,
+    reliability 255/255, txload 1/255, rxload 1/255
+  Encapsulation HDLC
+  Keepalive not set
+  Last input never, output never, output hang never
+  Last clearing of "show interface" counters 07:09:39
+  Input queue: 0/75/0/0 (size/max/drops/flushes); Total output drops: 0
+  Queueing strategy: weighted fair
+  Output queue: 0/1000/64/0 (size/max total/threshold/drops)
+    Conversations  0/0/256 (active/max active/max total)
+    Reserved Conversations 0/0 (allocated/max allocated)
+    Available Bandwidth 1158 kilobits/sec
+  5 minute input rate 0 bits/sec, 0 packets/sec
+  5 minute output rate 0 bits/sec, 0 packets/sec
+     0 packets input, 0 bytes, 0 no buffer
+     Received 0 broadcasts, 0 runts, 0 giants, 0 throttles
+     0 input errors, 0 CRC, 0 frame, 0 overrun, 0 ignored, 0 abort
+     0 packets output, 0 bytes, 0 underruns
+     0 output errors, 0 collisions, 2 interface resets
+     0 output buffer failures, 0 output buffers swapped out
+     0 carrier transitions
+     DCD=up  DSR=up  DTR=down  RTS=down  CTS=up
+```
+
+## PPP
+
+Enable PPP on an interface:
+
+- `Router(config-if)#encapsulation ppp`
+  - The _default_ encapuslation for serial interfaces is HDLC
+
+Define interface clock rate:
+
+- `Router(config-if)#clock rate <bps>`
+  - In units of bits per second
+  - Default is T1 speed (1544Kbps)
+
+Define interface bandwidth:
+
+- `Router(config-if)#bandwidth <Kbps>`
+  - In units of Kilo bits per second
+  - Default is T1 speed (1544Kbps)
+  - Has **no** effect on actual line speed. Used for routing protocol metric calculations.
+
+### PAP
+
+Enable PAP on the interface connecting to the neighbor:
+
+- `Router(config-if)#ppp authentication pap `
+  - PPP must be enabled on the interface first before this command
+
+Define expected _neighbor_ username and password:
+
+- `Router(config-if)#ppp pap sent-username <username> password <password> `
+  - PPP must be enabled on the interface first before this command
+  - `username` is the username expected from _neighbor device_ 
+  - `password` is the password expected from _neighbor device_
+
+Define a _local_ username and password to be sent with PAP:
+
+- `Router(config)#username <username> password <password>`
+  - `username` must match case-sensitive the username configured on the _neighbor_ device for this _local_ device
+  - `password` must match case-sensitive the password configured on the _neighbor_ device for this _local_ device
+
+### CHAP
+
+Enable CHAP on the interface connecting to the neighbor device:
+
+- `Router(config-if)#ppp authentication chap `
+  - PPP must be enabled on the interface first before this command
+
+Define a username and password:
+
+- `Router(config)#username <username> password <password>`
+  - Must be done on _both_ devices
+  - `username` must match case-sensitive the _hostname_ of the _neighbor_ device
+  - `password` must match case-sensitive on _both_ devices
+
+### MLPPP
+
+Create multilink interface:
+
+- `Router(config)#interface multilink <num>`
+  - `num` only needs to be _locally_ unique
+
+- `Router(config-if)#encapsulation ppp`
+- `Router(config-if)#ppp multilink`
+- `Router(config-if)#ip address <ip> <mask>`
+  - This is the IP of the multilink bundle logically seen by the router
+- `Router(config-if)#ppp multilink group <num>`
+  - `num` must match the _locally_ defined multilink number
+
+Add the multilink interface to all serial interfaces in the multilink:
+
+-  `Router(config-if)#encapsulation ppp`
+-  `Router(config-if)#ppp multilink`
+-  `Router(config-if)#no ip address`
+-  `Router(config-if)#ppp multilink group <num>`
+  - `num` must match the _locally_ defined multilink number
+- Add PAP/CHAP authentication to **each interface** in the multilink group if it is used
+
+### Troubleshooting
+
+Common Issues:
+
+1. Interface is up&down?
+   1. If other side is flipping between states, check for encapsulation miss match
+   2. If other side _stays down_, check for PAP/CHAP authentication failure
+   3. Check LCP (Link Control Protocol) state?
+      1. `REQsent` => likely an encapsulation miss match
+      2. `LCPopen` => link is up
+2. `ping` to neighbor interface works but no routing?
+   1. Check if interfaces in different subnets?
+      1. PPP will add a host route to routing table by default (makes `ping` work)
+3. IPv4 works but not IPv6?
+   1. Check NCP (Network Control Protocols) for IPv6CP?
+4. CDP is not working?
+   1. Check NCP (Network Control Protocols) for CDPCP?
+
+Example troubleshooting output:
+
+```
+Router#show controllers serial 0/0/1
+Interface Serial0/0/1
+Hardware is SCC
+DTE V.35 RX clock detected.
+```
+
+```
+Router#show interfaces serial 0/0/1
+Serial0/0/1 is up, line protocol is up
+  Hardware is GT96K Serial
+  Internet address is 10.100.0.2/12
+  MTU 1500 bytes, BW 1544 Kbit/sec, DLY 20000 usec,
+    reliability 255/255, txload 1/255, rxload 1/255
+  Encapsulation PPP, LCP Open
+   Open: IPCP, CDPCP, Loopback not set
+  Keepalive set (10sec)
+  Last input never, output never, output hang never
+  Last clearing of "show interface" counters 07:09:39
+  Input queue: 0/75/0/0 (size/max/drops/flushes); Total output drops: 0
+  Queueing strategy: weighted fair
+  Output queue: 0/1000/64/0 (size/max total/threshold/drops)
+    Conversations  0/0/256 (active/max active/max total)
+    Reserved Conversations 0/0 (allocated/max allocated)
+    Available Bandwidth 1158 kilobits/sec
+  5 minute input rate 0 bits/sec, 0 packets/sec
+  5 minute output rate 0 bits/sec, 0 packets/sec
+     0 packets input, 0 bytes, 0 no buffer
+     Received 0 broadcasts, 0 runts, 0 giants, 0 throttles
+     0 input errors, 0 CRC, 0 frame, 0 overrun, 0 ignored, 0 abort
+     0 packets output, 0 bytes, 0 underruns
+     0 output errors, 0 collisions, 2 interface resets
+     0 output buffer failures, 0 output buffers swapped out
+     0 carrier transitions
+     DCD=up  DSR=up  DTR=down  RTS=down  CTS=up
+```
+
+
 
 
 
