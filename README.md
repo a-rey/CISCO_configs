@@ -27,7 +27,8 @@ Define on an interface:
 
 Issues:
 
-**TODO**
+1. VLAN does not exist?
+   1. Did you exit VLAN configuration mode?
 
 Example troubleshooting output:
 
@@ -114,7 +115,7 @@ Common Issues:
 1. VLAN not allowed on trunk?
 2. Bad DTP paramaters (eg `auto`&`auto` or `access`&`desirable`)?
 3. Native VLANs don't match?
-4. Incorrect encapsulation?
+4. Incorrect encapsulation (ISL vs 802.1Q)?
 
 Example troubleshooting output:
 
@@ -146,6 +147,11 @@ Priority for untagged frames: 0
 Override vlan tag priority: FALSE
 Voice VLAN: none
 Appliance trust: none
+```
+
+```
+Switch#show interfaces fastEthernet 0/2 trunk
+TODO
 ```
 
 ## VLAN Trunking Protocol
@@ -251,7 +257,12 @@ Enable **or** disable per interface:
 ### Troubleshooting
 
 Common Issues:
-1. **TODO**
+1. Root node in the wrong place?
+   1. Check VLAN priorities (root node should have the most trunks connected to it)
+2. Weird path to root node?
+   1. Check for non-default costs along path
+3. Trunk interfaces down?
+   1. Check for BPDU guard and PortFast
 
 Example troubleshooting output:
 
@@ -353,7 +364,8 @@ Define dynamic channel (LACP - IEEE 802.3ad):
 ### Troubleshooting
 
 Common Issues:
-1. **TODO**
+1. Etherchannel interface up&down?
+   1. Check for PAgP/LACP dynamic channel miss matches
 
 Example troubleshooting output:
 
@@ -1136,7 +1148,6 @@ Create multilink interface:
 
 - `Router(config)#interface multilink <num>`
   - `num` only needs to be _locally_ unique
-
 - `Router(config-if)#encapsulation ppp`
 - `Router(config-if)#ppp multilink`
 - `Router(config-if)#ip address <ip> <mask>`
@@ -1210,7 +1221,13 @@ Serial0/0/1 is up, line protocol is up
      DCD=up  DSR=up  DTR=down  RTS=down  CTS=up
 ```
 
+## GRE Tunnels
 
+TODO
+
+### Troubleshooting
+
+TODO
 
 
 
