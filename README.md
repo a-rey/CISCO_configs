@@ -1115,18 +1115,18 @@ Enable PAP on the interface connecting to the neighbor:
 - `Router(config-if)#ppp authentication pap `
   - PPP must be enabled on the interface first before this command
 
-Define expected _neighbor_ username and password:
+Define _local_ username and password:
 
 - `Router(config-if)#ppp pap sent-username <username> password <password> `
   - PPP must be enabled on the interface first before this command
-  - `username` is the username expected from _neighbor device_ 
-  - `password` is the password expected from _neighbor device_
+  - `username` is the username sent to _neighbor device_ 
+  - `password` is the password sent to _neighbor device_
 
-Define a _local_ username and password to be sent with PAP:
+Define a _neighbor_ username and password expected from PAP:
 
 - `Router(config)#username <username> password <password>`
-  - `username` must match case-sensitive the username configured on the _neighbor_ device for this _local_ device
-  - `password` must match case-sensitive the password configured on the _neighbor_ device for this _local_ device
+  - `username` must match case-sensitive the username configured on the _neighbor_ device
+  - `password` must match case-sensitive the password configured on the _neighbor_ device
 
 ### CHAP
 
@@ -1426,7 +1426,177 @@ Serial0/0/1         unassigned   YES NVRAM   administratively down  down
 Tunnel0             172.16.1.1   YES NVRAM   up                     up
 ```
 
+## ACLs
 
+### Standard
+
+Numbered ACL definition:
+
+- `Router(config)#access-list <num> <permit|deny> <src> <wildcard> [log]` 
+  - `num` must be in ranges 1-99 or 1300-1999
+  - `src` & `wildcard` have 2 special cases:
+    - `host <ip>` = `<ip> 0.0.0.0`
+    - `any` = `x.x.x.x 255.255.255.255`
+  - `log` keyword enables notificational logging (level 6) for matching packets
+- `Router(config)#access-list <num> remark <msg>`
+  - Adds notes to the ACL numbered `num`
+
+Named ACL definition:
+
+-  `Router(config)#ip access-list standard <num|name>`
+  - `num` must be in ranges 1-99 or 1300-1999 _if used_
+    - Numbered ACLs configured through named ACL configuration mode show up as numbered ACLs in the running configuration but are managed through named ACL configuration mode
+- `Router(config-std-nacl)#<seq> <permit|deny> <src> <wildcard>`
+  - `seq` is the sequence number for this rule in the list
+    - Named ACLs enable editing/specifying ACL list order using sequence numbers _before_ each rule
+  - `src` & `wildcard` have 2 special cases:
+    - `host <ip>` = `<ip> 0.0.0.0`
+    - `any` = `x.x.x.x 255.255.255.255`
+- `Router(config-std-nacl)#remark <msg>`
+  - Adds notes to the ACL
+
+### Extended
+
+Numbered ACL definition:
+
+- `Router(config)#access-list <num> <permit|deny> <proto> <src> <wc> <dst> <wc> [log]` 
+  - `num` must be in ranges 100-199 or 2000-2699
+  - `src`/`dst` & `wc` (wildcard mask) have 2 special cases:
+    - `host <ip>` = `<ip> 0.0.0.0`
+    - `any` = `x.x.x.x 255.255.255.255`
+  - `log` keyword enables notificational logging (level 6) for matching packets
+  - `protocol` is the _transport_ layer protocol number:
+    - eg: `ip`, `tcp`, `udp`, `icmp`, `gre`, `ospf`, `eigrp`
+    - For TCP/UDP, following each IP & wildcard pair for source & destination, you can specify ports:
+      - eg: `eq`, `lt`, `ne`, `gt`, `range`
+      - Not specfying specific ports assumes _all_ ports will match rule
+- `Router(config)#access-list <num> remark <msg>`
+  - Adds notes to the ACL numbered `num`
+
+Named ACL definition:
+
+-  `Router(config)#ip access-list extended <num|name>`
+  - `num` must be in ranges 100-199 or 2000-2699 _if used_
+    - Numbered ACLs configured through named ACL configuration mode show up as numbered ACLs in the running configuration but are managed through named ACL configuration mode
+- `Router(config-ext-nacl)#<seq> <permit|deny> <src> <wildcard> <dst> <wildcard>`
+  - `seq` is the sequence number for this rule in the list
+    - Named ACLs enable editing/specifying ACL list order using sequence numbers _before_ each rule
+  - `src`/`dst` & `wildcard` have 2 special cases:
+    - `host <ip>` = `<ip> 0.0.0.0`
+    - `any` = `x.x.x.x 255.255.255.255`
+  - `protocol` is the _transport_ layer protocol number:
+    - eg: `ip`, `tcp`, `udp`, `icmp`, `gre`, `ospf`, `eigrp`
+    - For TCP/UDP, following each IP & wildcard pair for source & destination, you can specify ports:
+      - eg: `eq`, `lt`, `ne`, `gt`, `range`
+      - Not specfying specific ports assumes _all_ ports will match rule
+- `Router(config-ext-nacl)#remark <msg>`
+  - Adds notes to the ACL
+
+Common application ports to know:
+
+| Port      | Protocol  | Application | Extended ACL keyword |
+| --------- | --------- | ----------- | -------------------- |
+| 20        | TCP       | FTP Data    | `ftp-data`           |
+| 21        | TCP       | FTP Control | `ftp`                |
+| 22        | TCP       | SSH         | -                    |
+| 23        | TCP       | Telnet      | `telnet`             |
+| 25        | TCP       | SMTP        | `smtp`               |
+| 53        | UDP (TCP) | DNS         | `domain`             |
+| 67        | UDP       | DHCP Server | `bootps`             |
+| 68        | UDP       | DHCP Client | `bootpc`             |
+| 69        | UDP       | TFTP        | `tftp`               |
+| 80        | TCP       | HTTP        | `www`                |
+| 110       | TCP       | POP3        | `pop3`               |
+| 161 & 162 | UDP       | SNMP        | `snmp`               |
+| 443       | TCP       | SSL         | -                    |
+| 514       | UDP       | SYSLOG      | -                    |
+
+### Troubleshooting
+
+Common Issues:
+
+1. Standard ACLs **close to source**?
+
+2. Extended ACLs **close to destination**?
+
+3. ACL ordered most to least specific?
+
+   1. ACLs use _first match_ logic
+
+4. ACL applied in wrong direction?
+
+5. ACL has bad wildcard mask or swapped source and destination addresses?
+
+6. Routers **ignore** outbound ACL for self generated packets
+
+7. Router self-pings...
+
+   1. To Serial interfaces will leave local interface and use inbound ACL if there is one
+   2. To Ethernet interfaces will **not** leave local interface and instead test local TCP/IP stack
+
+8. Router routing protocol overhead being blocked?
+
+   1. | Protocol | Addresses             | Transport Protocol |
+      | -------- | --------------------- | ------------------ |
+      | RIPv2    | 224.0.0.9             | UDP port 520       |
+      | OSPF     | 224.0.0.5 & 224.0.0.6 | OSPF (number 89)   |
+      | EIGRP    | 224.0.0.10            | EIGRP (number 88)  |
+
+Example troubleshooting output:
+
+```
+Router#show ip access-lists
+ Extended IP access list 100
+	10  permit icmp any host 172.30.4.190
+	20  deny icmp any 172.30.4.128 0.0.0.63
+	30  permit tcp any host 172.30.4.190 eq 22
+	40  permit tcp any host 172.30.4.129 eq 22
+	50  deny tcp any host 172.30.4.129 eq telnet
+	60  deny tcp any host 172.30.4.190 eq telnet
+	70  permit ip any any
+```
+
+```
+Router#show ip interface serial 0/0/0
+Serial0/0/0 is up, line protocol is up
+  Internet address is 172.30.4.230/30
+  Broadcast address is 255.255.255.255
+  Address determined by non-volatile memory
+  MTU is 1500 bytes
+  Helper address is not set
+  Directed broadcast forwarding is disabled
+  Multicast reserved groups joined: 224.0.0.10
+  Outgoing access list is not set
+  Inbound  access list is 100
+  Proxy ARP is enabled
+  Local Proxy ARP is disabled
+  Security level is default
+  Split horizon is enabled
+  ICMP redirects are always sent
+  ICMP unreachables are always sent
+  ICMP mask replies are never sent
+  IP fast switching is enabled
+  IP fast switching on the same interface is disabled
+  IP Flow switching is disabled
+  IP CEF switching is enabled
+  IP CEF Fast switching turbo vector
+  IP multicast fast switching is enabled
+  IP multicast distributed fast switching is disabled
+  IP route-cache flags are Fast, CEF
+  Router Discovery is disabled
+  IP output packet accounting is disabled
+  IP access violation accounting is disabled
+  TCP/IP header compression is disabled
+  RTP/IP header compression is disabled
+  Policy routing is disabled
+  Network address translation is disabled
+  BGP Policy Mapping is disabled
+  Input features: MCI Check
+  Output features: Post-Ingress-NetFlow
+  IPv4 WCCP Redirect outbound is disabled
+  IPv4 WCCP Redirect inbound is disabled
+  IPv4 WCCP Redirect exclude is disabled
+```
 
 
 
