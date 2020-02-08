@@ -1147,7 +1147,7 @@ Define a username and password:
 Create local multilink interface:
 
 - `Router(config)#interface multilink <num>`
-  - `num` must match local group and on neighbor router
+  - `num` must match multilink group locally and on neighbor router
 - `Router(config-if)#encapsulation ppp`
 - `Router(config-if)#ppp multilink`
 - `Router(config-if)#ip address <ip> <mask>`
@@ -1162,61 +1162,64 @@ Add the multilink interface on all serial interfaces in the multilink:
 -  `Router(config-if)#ppp multilink`
 -  `Router(config-if)#no ip address`
 -  `Router(config-if)#ppp multilink group <num>`
-  - `num` must match local group and on neighbor router
+  -  `num` must match multilink group locally and on neighbor router
 - Add PAP/CHAP authentication on **each physical interface** in the multilink group if it is used
 
 ### PPPoE
 
-Create local dialer interface:
+Create _logical_ dialer interface:
 
 - `Router(config)#interface dialer <num>`
   - `num` is only _locally_ unique
 - `Router(config-if)#encapsulation ppp`
-  - Add PAP/CHAP authentication to dialer interface if it is used
+  - Layer 2: Add PAP/CHAP authentication to dialer interface if it is used
 - `Router(config-if)#ip address negotiated`
-  - Uses IPCP (a type of NCP) from PPP to learn IP from neighbor
+  - Layer 3: Uses IPCP (a type of NCP) from PPP to learn IP from neighbor
 - `Router(config-if)#mtu 1492`
-  - Accounts for the 8 byte PPPoE header
+  - Layer 3: Accounts for the 8 byte PPPoE header
 - `Router(config-if)#dialer pool <pool>`
-  - `pool` is only _locally_ unique
+  - Layer 1: `pool` is only _locally_ unique
 
-Define the PPPoE Ethernet interface:
+Define _physical_ Ethernet interface:
 
 -  `Router(config)#interface <eth-int>`
 -  `Router(config-if)#pppoe enable`
+   - Layer 2: enables PPoE on interface
 -  `Router(config-if)#pppoe-client dial-pool-number <pool>`
-   - `pool` must match the pool defined in the corresponding dialer interface
+   - Layer 1: `pool` must match the pool defined in the corresponding dialer interface
 -  `Router(config-if)#no ip address`
+   - Layer 3: IP address tied to logical _not_ physical interface in PPPoE
 
 ### Troubleshooting
 
 Common Issues:
 
-1. Interface is up&down?
-   1. If other side is flipping between states, check for encapsulation miss match
-   2. If other side _stays down_, check for PAP/CHAP authentication failure
-   3. Check LCP (Link Control Protocol) state?
-      1. `REQsent` => likely an encapsulation miss match
-      2. `LCPopen` => link is up
-2. `ping` to neighbor interface works but no routing?
-   1. Check if interfaces in different subnets?
-      1. PPP will add a host route to routing table by default (makes `ping` work)
-3. IPv4 works but not IPv6?
-   1. Check NCP (Network Control Protocols) for IPv6CP in `Open` state?
-4. CDP is not working?
-   1. Check NCP (Network Control Protocols) for CDPCP in `Open` state?
-5. MLPPP issues...
+1. PPP issues...
+   1. Interface is up&down?
+      1. If other side is flipping between states, check for encapsulation miss match
+      2. If other side _stays down_, check for PAP/CHAP authentication failure
+      3. Check LCP (Link Control Protocol) state?
+         1. `REQsent` => likely an encapsulation miss match
+         2. `LCPopen` => link is up
+   2. `ping` to neighbor interface works but no routing?
+      1. Check if interfaces in different subnets?
+         1. PPP will add a host route to routing table by default (makes `ping` work)
+   3. IPv4 works but not IPv6?
+      1. Check NCP (Network Control Protocols) for IPv6CP in `Open` state?
+   4. CDP is not working?
+      1. Check NCP (Network Control Protocols) for CDPCP in `Open` state?
+2. MLPPP issues...
    1. IP address assigned to physical interfaces instead of multilink interface?
-   2. Interface multilink number _and_ group number don't match locally or with neighbor?
+   2. Interface multilink number _and_ group number don't match locally **and** with neighbor?
    3. Multilink interface will be up&up as long as one of the serial links in the multilink group is up&up
-6. PPPoE issues...
-   1. `show interface dialer <num>` shows the interface as `up (spoofing) & up (spoofing)`:
-      1. If `show pppoe session` has no output, then check:
+3. PPPoE issues...
+   1. `show interface dialer <num>` shows the interface as `up (spoofing) & up (spoofing)`?
+      1. If `show pppoe session` has no output, then check (**Layer 1**):
          1. Dial pool numbers matching in the Ethernet interface and dialer interface?
-      2. If `show pppoe session` has no virtual access interface output, then check:
+      2. If `show pppoe session` has no virtual access interface output, then check (**Layer 2**):
          1. CHAP/PAP authentication issues?
-   2. `show interface dialer <num>` shows the interface as `up & up (spoofing)`:
-      1. If dialer interface does not have an IP, then check:
+   2. `show interface dialer <num>` shows the interface as `up & up (spoofing)`?
+      1. If dialer interface does not have an IP, then check (**Layer 3**):
          1. MTU equals 1492 on dialer interface?
          2. PPP NCP protocols allow for IPCP or IPv6CP to negotiate IP on dialer interface?
 
@@ -1325,15 +1328,14 @@ Define the tunnel:
 
 - `Router(config)#interface tunnel <num>`
   - `num` is only _locally_ unique
-
 - `Router(config-if)#tunnel mode gre ip`
   - Sets GRE encapsulation for IPv4 _only_
 - `Router(config-if)#tunnel source <src>`
-  - `src` can be a local interface or IP for the WAN
-  - This is the **local public address** for the start of the tunnel
+  - `src` can be a local interface or IP on the WAN
+  - This is the **local public source address** for the start of the tunnel
 - `Router(config-if)#tunnel destination <dst>`
   - `dst` can be an IP or hostname for the tunnel endpoint across the WAN
-  - This is the **public destination address** of the other end of the tunnel
+  - This is the **remote public destination address** of the other end of the tunnel
 - `Router(config-if)#ip address <private-ip> <mask>`
   - `private-ip` is used for the point-to-point **private** connection **inside** the tunnel
 
