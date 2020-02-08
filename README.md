@@ -1428,18 +1428,24 @@ Tunnel0             172.16.1.1   YES NVRAM   up                     up
 
 ## ACLs
 
+Adding notes to an ACL (named & numbered):
+
+- `Router(config)#access-list <num> remark <msg>`
+- `Router(config-std-nacl)#remark <msg>`
+- `Router(config-ext-nacl)#remark <msg>`
+
+Special IP and wildcard mask combinations:
+
+- `host <ip>` = `<ip> 0.0.0.0`
+- `any` = `x.x.x.x 255.255.255.255`
+
 ### Standard
 
 Numbered ACL definition:
 
 - `Router(config)#access-list <num> <permit|deny> <src> <wildcard> [log]` 
   - `num` must be in ranges 1-99 or 1300-1999
-  - `src` & `wildcard` have 2 special cases:
-    - `host <ip>` = `<ip> 0.0.0.0`
-    - `any` = `x.x.x.x 255.255.255.255`
   - `log` keyword enables notificational logging (level 6) for matching packets
-- `Router(config)#access-list <num> remark <msg>`
-  - Adds notes to the ACL numbered `num`
 
 Named ACL definition:
 
@@ -1449,11 +1455,6 @@ Named ACL definition:
 - `Router(config-std-nacl)#<seq> <permit|deny> <src> <wildcard>`
   - `seq` is the sequence number for this rule in the list
     - Named ACLs enable editing/specifying ACL list order using sequence numbers _before_ each rule
-  - `src` & `wildcard` have 2 special cases:
-    - `host <ip>` = `<ip> 0.0.0.0`
-    - `any` = `x.x.x.x 255.255.255.255`
-- `Router(config-std-nacl)#remark <msg>`
-  - Adds notes to the ACL
 
 ### Extended
 
@@ -1461,36 +1462,22 @@ Numbered ACL definition:
 
 - `Router(config)#access-list <num> <permit|deny> <proto> <src> <wc> <dst> <wc> [log]` 
   - `num` must be in ranges 100-199 or 2000-2699
-  - `src`/`dst` & `wc` (wildcard mask) have 2 special cases:
-    - `host <ip>` = `<ip> 0.0.0.0`
-    - `any` = `x.x.x.x 255.255.255.255`
   - `log` keyword enables notificational logging (level 6) for matching packets
-  - `protocol` is the _transport_ layer protocol number:
-    - eg: `ip`, `tcp`, `udp`, `icmp`, `gre`, `ospf`, `eigrp`
-    - For TCP/UDP, following each IP & wildcard pair for source & destination, you can specify ports:
-      - eg: `eq`, `lt`, `ne`, `gt`, `range`
-      - Not specfying specific ports assumes _all_ ports will match rule
-- `Router(config)#access-list <num> remark <msg>`
-  - Adds notes to the ACL numbered `num`
+  - `proto` is the _transport_ layer protocol keyword (`ip`, `tcp`, `udp`, `icmp`, `gre`, `ospf`, `eigrp`)
+    - For TCP/UDP, following each IP & wildcard pair for source & destination, you can specify ports ( `eq`, `lt`, `ne`, `gt`, `range`)
+    - Not specfying specific ports assumes _all_ ports will match rule
 
 Named ACL definition:
 
 -  `Router(config)#ip access-list extended <num|name>`
   - `num` must be in ranges 100-199 or 2000-2699 _if used_
     - Numbered ACLs configured through named ACL configuration mode show up as numbered ACLs in the running configuration but are managed through named ACL configuration mode
-- `Router(config-ext-nacl)#<seq> <permit|deny> <src> <wildcard> <dst> <wildcard>`
+- `Router(config-ext-nacl)#<seq> <permit|deny> <proto> <src> <wildcard> <dst> <wildcard>`
   - `seq` is the sequence number for this rule in the list
     - Named ACLs enable editing/specifying ACL list order using sequence numbers _before_ each rule
-  - `src`/`dst` & `wildcard` have 2 special cases:
-    - `host <ip>` = `<ip> 0.0.0.0`
-    - `any` = `x.x.x.x 255.255.255.255`
-  - `protocol` is the _transport_ layer protocol number:
-    - eg: `ip`, `tcp`, `udp`, `icmp`, `gre`, `ospf`, `eigrp`
-    - For TCP/UDP, following each IP & wildcard pair for source & destination, you can specify ports:
-      - eg: `eq`, `lt`, `ne`, `gt`, `range`
-      - Not specfying specific ports assumes _all_ ports will match rule
-- `Router(config-ext-nacl)#remark <msg>`
-  - Adds notes to the ACL
+  - `proto` is the _transport_ layer protocol keyword (`ip`, `tcp`, `udp`, `icmp`, `gre`, `ospf`, `eigrp`)
+    - For TCP/UDP, following each IP & wildcard pair for source & destination, you can specify ports ( `eq`, `lt`, `ne`, `gt`, `range`)
+    - Not specfying specific ports assumes _all_ ports will match rule
 
 Common application ports to know:
 
