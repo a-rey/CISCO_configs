@@ -1144,25 +1144,49 @@ Define a username and password:
 
 ### MLPPP
 
-Create multilink interface:
+Create local multilink interface:
 
 - `Router(config)#interface multilink <num>`
-  - `num` only needs to be _locally_ unique
+  - `num` must match local group and on neighbor router
 - `Router(config-if)#encapsulation ppp`
 - `Router(config-if)#ppp multilink`
 - `Router(config-if)#ip address <ip> <mask>`
-  - This is the IP of the multilink bundle logically seen by the router
+  - This is the IP of the multilink bundle logically seen by the neighbor router
 - `Router(config-if)#ppp multilink group <num>`
-  - `num` must match the _locally_ defined multilink number
+  - `num` must match local group and on neighbor router
 
-Add the multilink interface to all serial interfaces in the multilink:
+Add the multilink interface on all serial interfaces in the multilink:
 
+-  `Router(config)#interface serial <int>`
 -  `Router(config-if)#encapsulation ppp`
 -  `Router(config-if)#ppp multilink`
 -  `Router(config-if)#no ip address`
 -  `Router(config-if)#ppp multilink group <num>`
-  - `num` must match the _locally_ defined multilink number
-- Add PAP/CHAP authentication to **each interface** in the multilink group if it is used
+  - `num` must match local group and on neighbor router
+- Add PAP/CHAP authentication on **each physical interface** in the multilink group if it is used
+
+### PPPoE
+
+Create local dialer interface:
+
+- `Router(config)#interface dialer <num>`
+  - `num` is only _locally_ unique
+- `Router(config-if)#encapsulation ppp`
+  - Add PAP/CHAP authentication to dialer interface if it is used
+- `Router(config-if)#ip address negotiated`
+  - Uses IPCP (a type of NCP) from PPP to learn IP from neighbor
+- `Router(config-if)#mtu 1492`
+  - Accounts for the 8 byte PPPoE header
+- `Router(config-if)#dialer pool <pool>`
+  - `pool` is only _locally_ unique
+
+Define the PPPoE Ethernet interface:
+
+-  `Router(config)#interface <eth-int>`
+-  `Router(config-if)#pppoe enable`
+-  `Router(config-if)#pppoe-client dial-pool-number <pool>`
+   - `pool` must match the pool defined in the corresponding dialer interface
+-  `Router(config-if)#no ip address`
 
 ### Troubleshooting
 
@@ -1178,9 +1202,23 @@ Common Issues:
    1. Check if interfaces in different subnets?
       1. PPP will add a host route to routing table by default (makes `ping` work)
 3. IPv4 works but not IPv6?
-   1. Check NCP (Network Control Protocols) for IPv6CP?
+   1. Check NCP (Network Control Protocols) for IPv6CP in `Open` state?
 4. CDP is not working?
-   1. Check NCP (Network Control Protocols) for CDPCP?
+   1. Check NCP (Network Control Protocols) for CDPCP in `Open` state?
+5. MLPPP issues...
+   1. IP address assigned to physical interfaces instead of multilink interface?
+   2. Interface multilink number _and_ group number don't match locally or with neighbor?
+   3. Multilink interface will be up&up as long as one of the serial links in the multilink group is up&up
+6. PPPoE issues...
+   1. `show interface dialer <num>` shows the interface as `up (spoofing) & up (spoofing)`:
+      1. If `show pppoe session` has no output, then check:
+         1. Dial pool numbers matching in the Ethernet interface and dialer interface?
+      2. If `show pppoe session` has no virtual access interface output, then check:
+         1. CHAP/PAP authentication issues?
+   2. `show interface dialer <num>` shows the interface as `up & up (spoofing)`:
+      1. If dialer interface does not have an IP, then check:
+         1. MTU equals 1492 on dialer interface?
+         2. PPP NCP protocols allow for IPCP or IPv6CP to negotiate IP on dialer interface?
 
 Example troubleshooting output:
 
@@ -1189,6 +1227,38 @@ Router#show controllers serial 0/0/1
 Interface Serial0/0/1
 Hardware is SCC
 DTE V.35 RX clock detected.
+```
+
+```
+Router#show ppp all
+TODO
+```
+
+```
+Router#show ppp multilink
+Multilink1
+  Bundle name: R2
+  Remote Endpoint Discriminator: [1] R2
+  Local Endpoint Discriminator: [1] R1
+  Bundle up for 00:06:00, total bandwidth 3088, load 1/255
+  Receive buffer limit 24000 bytes, frag timeout 1000 ms
+    0/0 fragments/bytes in reassembly list
+    0 lost fragments, 3 reordered
+    0/0 discarded fragments/bytes, 0 lost received
+    0x26 received sequence, 0x2A sent sequence
+  Member links: 2 active, 0 inactive (max 255, min not set)
+    Se0/0/0, since 00:06:00
+    Se0/1/0, since 00:05:53
+No inactive multilink interfaces
+```
+
+```
+Router#show pppoe session
+1 client session
+Uniq ID  PPPoE  RemMAC          Port                VT   VA         State
+           SID  LocMAC                                   VA-st      Type
+     N/A     1  30f7.0da3.1641 Gi0/1                Di2  Vi2        UP
+                30f7.0da3.0da1                           UP
 ```
 
 ```
@@ -1221,13 +1291,142 @@ Serial0/0/1 is up, line protocol is up
      DCD=up  DSR=up  DTR=down  RTS=down  CTS=up
 ```
 
+```
+Router#show interfaces virtual-access <x>
+TODO
+```
+
+```
+Router#show interfaces virtual-access <x> configuration
+TODO
+```
+
+```
+Router#show interfaces dialer 2
+Dialer2 is up, line protocol is up (spoofing)
+  Hardware is Unknown
+  Internet address is 10.1.3.1/32
+  MTU 1492 bytes, BW 56 Kbit/sec, DLY 20000 usec,
+    reliability 255/255, txload 1/255, rxload 1/255
+  Encapsulation PPP, LCP Closed, loopback not set
+  Keepalive set (10 sec)
+  DTR is pulsed for 1 seconds on reset
+```
+
 ## GRE Tunnels
 
-TODO
+Define physical interface _public_ IP:
+
+- `Router(config)#interface <int>`
+- `Router(config-if)#ip address <public-ip> <mask>`
+  - `public-ip` is the public IP used for the point-to-point connection across the WAN
+
+Define the tunnel:
+
+- `Router(config)#interface tunnel <num>`
+  - `num` is only _locally_ unique
+
+- `Router(config-if)#tunnel mode gre ip`
+  - Sets GRE encapsulation for IPv4 _only_
+- `Router(config-if)#tunnel source <src>`
+  - `src` can be a local interface or IP for the WAN
+  - This is the **local public address** for the start of the tunnel
+- `Router(config-if)#tunnel destination <dst>`
+  - `dst` can be an IP or hostname for the tunnel endpoint across the WAN
+  - This is the **public destination address** of the other end of the tunnel
+- `Router(config-if)#ip address <private-ip> <mask>`
+  - `private-ip` is used for the point-to-point **private** connection **inside** the tunnel
 
 ### Troubleshooting
 
-TODO
+Common Issues:
+
+1. Is tunnel interface up&up?
+   1. Tunnels are _stateless_
+      1. Local end being up&up **does not** mean the remote end is up&up as well
+2. Is tunnel interface up&down?
+   1. By default, without any additional configuration, the tunnel will be up&down
+   2. Is tunnel _destination_ IP route in the local routing table?
+      1. If not, tunnel will be up&down
+3. Is tunnel _source_ interface up&up?
+4. Is an ACL blocking GRE (**transport** protocol number 47)
+   1. Need a `permit ip ...` or `permit gre ...`
+5. Is tunnel interface flapping states (up and down)?
+   1. Likely a _recursive route_ due to a dynamic routing protocol being used through the tunnel to learn a better route to the tunnel itself
+
+Example troubleshooting output:
+
+```
+Router#show interfaces tunnel 0
+Tunnel0 is up, line protocol is up
+  Hardware is Tunnel
+  Internet address is 192.168.1.2/24
+  MTU 1514 bytes, BW 8000000 Kbit/sec, DLY 5000 usec,
+    reliability 255/255, txload 1/255, rxload 1/255
+  Encapsulation TUNNEL, Loopback not set
+  keep alive not set
+  Tunnel Source 10.10.10.2 (Serial0/0/1) , destination 10.10.10.1
+   Tunnel Subblocks:
+      src-tracks:
+         Tunnel0 source tracking sub block associated with Serial0/0/1
+          set of tunnel with sourceSerial0/0/1 , 1 member (includes iterators)
+  , on interface<OK>
+  Tunnel protocol/Transport GRE/IP
+    keep disabled, sequencing disabled
+  Tunnel 255, Fast tunnelling enabled
+  Tunnel transport MTU 1476 bytes
+  Tunnel transmit bandwidth 8000 (kbps)
+  Tunnel receive bandwidth 8000 (kpbs)
+  Last input never, output never, output hang never
+  Last clearing of "show interface" counters never
+  Input queue: 0/75/0/0 (size/max/drops/flushes); Total output drops: 0
+  Queueing strategy: fifo
+  Output queue: 0/0 (size/max)
+  5 minute input rate 0 bits/sec, 0 packets/sec
+  5 minute output rate 0 bits/sec, 0 packets/sec
+     0 packets input, 0 bytes, 0 no buffer
+     Received 0 broadcasts, 0 runts, 0 giants, 0 throttles
+     0 input errors, 0 CRC, 0 frame, 0 overrun, 0 ignored, 0 abort
+     0 packets output, 0 bytes, 0 underruns
+     0 output errors, 0 collisions, 0 interface resets
+     0 output buffer failures, 0 output buffers swapped out
+```
+
+```
+Router#show ip route connected
+Codes: L - local, C - connected, S - static, R - RIP, M - mobile, B - BGP
+       D - EIGRP, EX - EIGRP external, O - OSPF, IA - OSPF inter area
+       N1 - OSPF NSSA external type 1, N2 - OSPF NSSA external type 2
+       E1 - OSPF external type 1, E2 - OSPF external type 2
+       i - IS-IS, su - IS-IS summary, L1 - IS-IS level-1, L2 - IS-IS level-2
+       ia - IS-IS inter area, * - candidate default, U - per-user static route
+       o - ODR, P - periodic downloaded static route, H - NHRP, l - LISP
+       + - replicated route, % - next hop override
+Gateway of last resort is 172.16.1.2 to network 0.0.0.0
+     1.0.0.0/8 is variably subnetted, 2 subnets, 2 masks
+C       1.1.1.0/24 is directly connected, GigabitEthernet0/0
+L       1.1.1.1/32 is directly connected, GigabitEthernet0/0
+     172.16.0.0/16 is variably subnetted, 2 subnets, 2 masks
+C       172.16.1.0/24 is directly connected, Tunnel0
+L       172.16.1.1/32 is directly connected, Tunnel0
+     192.168.1.0/24 is variably subnetted, 2 subnets, 2 masks
+C       192.168.1.0/30 is directly connected, Serial0/0/0
+L       192.168.1.1/32 is directly connected, Serial0/0/0
+```
+
+```
+Router#show ip interface brief
+Interface           IP-Address   OK? METHOD  Status                 Protocol
+GigabitEthernet0/0  1.1.1.1      YES NVRAM   up                     up
+GigabitEthernet0/1  unassigned   YES NVRAM   administratively down  down
+Serial0/0/0         192.168.1.1  YES NVRAM   up                     up
+Serial0/0/1         unassigned   YES NVRAM   administratively down  down
+Tunnel0             172.16.1.1   YES NVRAM   up                     up
+```
+
+
+
+
 
 
 
