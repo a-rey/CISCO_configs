@@ -343,7 +343,10 @@ Port 11(FastEthernet0/11) of VLAN0001 is designated forwarding
 Define static channel:
 - `Switch(config-if-range)#channel-group <number> mode on`
 
+### PAgP
+
 Define dynamic channel (PAgP - Cisco Proprietary):
+
 - `Switch(config-if-range)#channel-group <number> mode <desirable|auto>`
 
 |             | `on`        | `desirable` | `auto`      |
@@ -352,7 +355,10 @@ Define dynamic channel (PAgP - Cisco Proprietary):
 | `desirable` | !!! BAD !!! | Y           | Y           |
 | `auto`      | !!! BAD !!! | Y           | N           |
 
+### LACP
+
 Define dynamic channel (LACP - IEEE 802.3ad):
+
 - `Switch(config-if-range)#channel-group <number> mode <passive|active>`
 
 |           | `on`        | `active`    | `passive`   |
@@ -1135,12 +1141,12 @@ Enable CHAP on the interface connecting to the neighbor device:
 - `Router(config-if)#ppp authentication chap `
   - PPP must be enabled on the interface first before this command
 
-Define a username and password:
+Define username and password for neighbor device:
 
 - `Router(config)#username <username> password <password>`
   - Must be done on _both_ devices
   - `username` must match case-sensitive the _hostname_ of the _neighbor_ device
-  - `password` must match case-sensitive on _both_ devices
+  - `password` must match case-sensitive on _both devices_
 
 ### MLPPP
 
@@ -1354,7 +1360,7 @@ Common Issues:
 4. Is an ACL blocking GRE (**transport** protocol number 47)
    1. Need a `permit ip ...` or `permit gre ...`
 5. Is tunnel interface flapping states (up and down)?
-   1. Likely a _recursive route_ due to a dynamic routing protocol being used through the tunnel to learn a better route to the tunnel itself
+   1. Likely a _recursive route_ due to a dynamic routing protocol being used through the tunnel to learn a better route to the tunnel's public interface through the tunnel itself
 
 Example troubleshooting output:
 
@@ -1503,31 +1509,22 @@ Common application ports to know:
 Common Issues:
 
 1. Standard ACLs **close to source**?
-
 2. Extended ACLs **close to destination**?
-
-3. ACL ordered most to least specific?
-
+3. ACL rules ordered most to least specific?
+   
    1. ACLs use _first match_ logic
-
 4. ACL applied in wrong direction?
-
 5. ACL has bad wildcard mask or swapped source and destination addresses?
-
 6. Routers **ignore** outbound ACL for self generated packets
-
 7. Router self-pings...
-
    1. To Serial interfaces will leave local interface and use inbound ACL if there is one
    2. To Ethernet interfaces will **not** leave local interface and instead test local TCP/IP stack
-
 8. Router routing protocol overhead being blocked?
-
-   1. | Protocol | Addresses             | Transport Protocol |
-      | -------- | --------------------- | ------------------ |
-      | RIPv2    | 224.0.0.9             | UDP port 520       |
-      | OSPF     | 224.0.0.5 & 224.0.0.6 | OSPF (number 89)   |
-      | EIGRP    | 224.0.0.10            | EIGRP (number 88)  |
+   1. | Protocol | Addresses             | Transport Protocol         |
+      | -------- | --------------------- | -------------------------- |
+      | RIPv2    | 224.0.0.9             | UDP port 520               |
+      | OSPF     | 224.0.0.5 & 224.0.0.6 | OSPF (protocol number 89)  |
+      | EIGRP    | 224.0.0.10            | EIGRP (protocol number 88) |
 
 Example troubleshooting output:
 
@@ -1585,9 +1582,175 @@ Serial0/0/0 is up, line protocol is up
   IPv4 WCCP Redirect exclude is disabled
 ```
 
+## Inter-VLAN Routing
 
+### Layer 3 Switch
 
+Enable IPv4/IPv6 routing:
 
+- `Switch(config)#sdm prefer lanbase-routing`
+  - Configures ASIC hardware to make room in memory for IP routing tables
+  - _May_ require a `reload` before enabling IP routing with the next command
+  - _May_ not be required on all switch models
+- `Switch(config)#sdm prefer dual-ipv4-and-ipv6`
+  - Used to enable IPv6 routing (does not support dynamic IPv6 routing)
+- `Switch(config)#ip routing`
 
+Define a Layer 3 switch SVI (logical):
 
+- `Switch(config)#interface vlan <num>`
+- `Switch(config-if)#ip address <ip> <mask>`
+- Used between access and distribution switches with _multiple access_ ports connected to a VLAN
+
+Define a Layer 3 Switch Routed Port (physical):
+
+- `Switch(config-if)#no switchport`
+- `Switch(config-if)#ip address <ip> <mask>`
+- Used between distribution and core switches with _one_ link between each other for point-to-point routing 
+
+Define a Layer 3 Switch EtherChannel (Layer 3):
+
+1. Used between distribution and core switches with _multiple_ links between each other for redundant/load balanced routing 
+
+2. Define associated _physical_ interfaces:
+
+   - `Switch(config)#interface <int>`
+
+   - `Switch(config-if)#no switchport`
+   - `Switch(config-if)#no ip address`
+   - `Switch(config-if)#channel-group <num> mode <on|active|passive|desirable|auto>`
+     - `num` must match _locally_ defined EtherChannel interface number
+     - Mode supports LACP/PAgP negotiation or `on` for always enabled
+
+3. Define layer 3 _logical_ EtherChannel:
+
+   - `Switch(config)#interface port-channel <num>`
+     - `num` must match _locally_ on all physical interfaces in EtherChannel
+
+   - `Switch(config-if)#no switchport`
+   - `Switch(config-if)#ip address <ip> <mask>`
+
+### Router on a Stick
+
+Defining a subinterface for per-VLAN traffic:
+
+- `Router(config)#interface gigabitEthernet 0/<subint>`
+  - `subint` is a number to represent the VLAN interface on the trunk (eg `0.10` for VLAN 10)
+  - `subint` _does not_ need to match the VLAN ID on the trunk
+- `Router(config-subif)#encapsulation <dot1q|isl> <vlan> [native]`
+  - `vlan` is the encapsulated VLAN ID on the trunk matching this subnet. It _must_ match the VLAN ID configured on the switch.
+  - `native` keyword is used to specify the native VLAN on the trunk that the switch sends untagged
+- `Router(config-subif)#ip address <ip> <mask>`
+
+Defining native VLAN on _physical_ interface (for untagged traffic):
+
+- `Router(config)#interface <int>`
+- `Router(config-if)#ip address <ip> <mask>`
+  - Router expects untagged native VLAN traffic to be in this subnet _without_ having to define a matching native VLAN ID as done in a subinterface
+
+### Troubleshooting
+
+Common Issues:
+
+1. SVI issues...
+   1. Missing `sdm prefer` or `ip routing`?
+   2. VLAN interface is shutdown?
+   3. VLAN is shutdown?
+   4. VLAN interface created but not assigned to an interface?
+      1. VLAN interface will be up&down until VLAN assigned to an access port
+2. Router on a stick issues...
+   1. Wrong encapsulation number on subinterface to match VLAN ID?
+   2. Bad IP/subnet mask for VLAN subinterface?
+   3. Wrong native VLAN ID on subinterface?
+      1. `native` keyword on wrong subinterface?
+      2. IP/subnet mask wrong on physical interface for native VLAN?
+   4. DTP in use on neighbor switch?
+   5. Physical interface up&up? 
+      1. Logical subinterfaces will not come up if physical interface is down
+3. Layer 3 Etherchannel issues...
+   1. Non-matching channel numbers on interfaces and channel definition?
+   2. `switchport` (L2) not disabled on all interfaces _and_ channel?
+   3. IP address assigned to physical interface and not channel interface?
+   4. LACP/PAgP protocol miss match?
+
+Example troubleshooting output:
+
+```
+Router#show vlan
+Virtual LAN ID:    1 IEEE 802.1Q Encapsulation
+
+  vLAN Trunk Interfaces:   GigabitEthernet0/0
+This is configured as native vlan for the following interface(s):
+GigabitEthernet0/0             Native-vlan Tx-type:Untagged
+
+  Protocols Configured:  	Address:        	Received:  	Transmitted:
+   IP                    	100.100.100.65  	0          	0
+   other                 	                	0          	0
+  
+  0 packets, 0 bytes input
+  0 packets, 0 bytes output
+  
+Virtual LAN ID:    10 IEEE 802.1Q Encapsulation
+
+  vLAN Trunk Interfaces:   GigabitEthernet0/0.100
+  Protocols Configured:	Address:	Received:	Transmitted:
+  
+  0 packets, 0 bytes input
+  0 packets, 0 bytes output
+  
+Virtual LAN ID:    20 IEEE 802.1Q Encapsulation
+
+  vLAN Trunk Interfaces:   GigabitEthernet0/0.150
+  Protocols Configured:  	Address:         	Received:  	Transmitted:
+   IP                    	100.100.100.129  	0          	0
+   other                 	                 	0          	0
+   
+  0 packets, 0 bytes input
+  0 packets, 0 bytes output
+```
+
+```
+Router#show ip interface brief
+Interface               IP-Address       OK? METHOD  Status                 Protocol
+GigabitEthernet0/0      100.100.100.65   YES NVRAM   up                     up
+GigabitEthernet0/0.150  100.100.100.129  YES NVRAM   up                     up
+GigabitEthernet0/0.100  unassigned       YES NVRAM   up                     up
+GigabitEthernet0/1      unassigned       YES NVRAM   administratively down  down
+Serial0/0/0             192.168.1.1      YES NVRAM   up                     up
+Serial0/0/1             unassigned       YES NVRAM   administratively down  down
+```
+
+```
+Switch#show ip interface brief
+Interface           IP-Address  OK? METHOD  Status  Protocol
+FastEthernet0/1     unassigned  YES NVRAM   up      up
+FastEthernet0/2     unassigned  YES NVRAM   down    down
+FastEthernet0/3     unassigned  YES NVRAM   down    down
+FastEthernet0/4     unassigned  YES NVRAM   down    down
+FastEthernet0/5     unassigned  YES NVRAM   down    down
+FastEthernet0/6     unassigned  YES NVRAM   down    down
+FastEthernet0/7     unassigned  YES NVRAM   down    down
+FastEthernet0/8     unassigned  YES NVRAM   down    down
+FastEthernet0/9     unassigned  YES NVRAM   down    down
+FastEthernet0/10    unassigned  YES NVRAM   up      up
+FastEthernet0/11    unassigned  YES NVRAM   up      up
+FastEthernet0/12    unassigned  YES NVRAM   down    down
+FastEthernet0/13    unassigned  YES NVRAM   down    down
+FastEthernet0/14    unassigned  YES NVRAM   down    down
+FastEthernet0/15    unassigned  YES NVRAM   down    down
+FastEthernet0/16    unassigned  YES NVRAM   down    down
+FastEthernet0/17    unassigned  YES NVRAM   down    down
+FastEthernet0/18    unassigned  YES NVRAM   down    down
+FastEthernet0/19    unassigned  YES NVRAM   down    down
+FastEthernet0/20    unassigned  YES NVRAM   down    down
+FastEthernet0/21    unassigned  YES NVRAM   down    down
+FastEthernet0/22    unassigned  YES NVRAM   down    down
+FastEthernet0/23    unassigned  YES NVRAM   down    down
+FastEthernet0/24    unassigned  YES NVRAM   down    down
+GigabitEthernet0/1  unassigned  YES NVRAM   up      up
+GigabitEthernet0/2  unassigned  YES NVRAM   up      up
+Vlan1               unassigned  YES NVRAM   up      up
+Vlan69              10.10.69.1  YES NVRAM   up      up
+Vlan70              10.10.70.1  YES NVRAM   up      down
+```
 
