@@ -1611,22 +1611,16 @@ Define a Layer 3 Switch Routed Port (physical):
 Define a Layer 3 Switch EtherChannel (Layer 3):
 
 1. Used between distribution and core switches with _multiple_ links between each other for redundant/load balanced routing 
-
 2. Define associated _physical_ interfaces:
-
    - `Switch(config)#interface <int>`
-
    - `Switch(config-if)#no switchport`
    - `Switch(config-if)#no ip address`
    - `Switch(config-if)#channel-group <num> mode <on|active|passive|desirable|auto>`
      - `num` must match _locally_ defined EtherChannel interface number
      - Mode supports LACP/PAgP negotiation or `on` for always enabled
-
 3. Define layer 3 _logical_ EtherChannel:
-
    - `Switch(config)#interface port-channel <num>`
      - `num` must match _locally_ on all physical interfaces in EtherChannel
-
    - `Switch(config-if)#no switchport`
    - `Switch(config-if)#ip address <ip> <mask>`
 
