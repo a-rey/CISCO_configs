@@ -1,6 +1,6 @@
 
 
-# CISCO Configuration Guide
+# CISCO CCNA Routing & Switching (ICND1 & 2) Configuration Guide
 
 [TOC]
 
@@ -1614,6 +1614,7 @@ Define a Layer 3 Switch EtherChannel (Layer 3):
 2. Define associated _physical_ interfaces:
    - `Switch(config)#interface <int>`
    - `Switch(config-if)#no switchport`
+     - This command will remove **all L2 configuration commands on the interface**
    - `Switch(config-if)#no ip address`
    - `Switch(config-if)#channel-group <num> mode <on|active|passive|desirable|auto>`
      - `num` must match _locally_ defined EtherChannel interface number
@@ -1635,6 +1636,7 @@ Defining a subinterface for per-VLAN traffic:
   - `vlan` is the encapsulated VLAN ID on the trunk matching this subnet. It _must_ match the VLAN ID configured on the switch.
   - `native` keyword is used to specify the native VLAN on the trunk that the switch sends untagged
 - `Router(config-subif)#ip address <ip> <mask>`
+  - Encapsulation must be configured first before this command
 
 Defining native VLAN on _physical_ interface (for untagged traffic):
 
@@ -1746,5 +1748,105 @@ GigabitEthernet0/2  unassigned  YES NVRAM   up      up
 Vlan1               unassigned  YES NVRAM   up      up
 Vlan69              10.10.69.1  YES NVRAM   up      up
 Vlan70              10.10.70.1  YES NVRAM   up      down
+```
+
+## HSRP
+
+Enable on an interface:
+
+- `Router(config-if)#standby <group> ip <virtual-ip>`
+- `group` must be **globally** unique across all routers in this HSRP group
+
+Define group priority:
+
+- `Router(config-if)#standby <group> priority <priority>`
+- Setting this higher than the current active router's priority will _not_ make the local router active unless preemption is enabled
+- The default priority is **100**
+
+Enable preemption:
+
+- `Router(config-if)#standby <group> preempt`
+- This is **disabled by default** 
+
+Define version:
+
+- `Router(config-if)#standby version <1|2>`
+- The **default is version 1**
+- Version must match _globally_ with all routers in the HSRP group
+
+Define timers:
+
+- `Router(config-if)#standby <group> timers <hello> <hold>`
+- `hello` and `hold` are in seconds
+- _Only the active router can set and immediately activate changes in these timer values_
+  - If the local router is not active, the timer values will activate when the local router becomes active
+
+Define interface priority tracking:
+
+- `Router(config)#track <track-num> <interface> line-protocol`
+- `Router(config-if)#standby <group> track <track-num> decrement <priority-dec>`
+  - `priority-dec` will be decrimented from the HSRP group number `group`'s priority if interface `interface`'s line protocol changes state
+
+HSRP/VRRP version differences:
+
+| Differences                            | HSRP Version 1   | HSRP Version 2   | VRRP             |
+| -------------------------------------- | ---------------- | ---------------- | ---------------- |
+| IPv6 Support                           | No               | Yes              | v2 No & v3 Yes   |
+| Smallest Hello/Hold Timer Unit         | seconds          | milliseconds     | milliseconds     |
+| Group Number Range                     | 0 - 255          | 0 - 4095         | 0 - 255          |
+| Virtual MACs Used (`x` = group number) | `0000.0C07.ACxx` | `0000.0C9F.Fxxx` | `0000.5E00.01xx` |
+| IPv4 Multicast Addresses Used          | 224.0.0.2        | 224.0.0.102      | 224.0.0.18       |
+| Require a Unique Router ID?            | No               | Yes              | Yes              |
+| Preemption Enabled By Default?         | No               | No               | Yes              |
+
+### Troubleshooting
+
+Common Issues:
+
+1. Multiple active routers?
+   1. Likely a group number miss match
+2. Default gateway only works sometimes?
+   1. Routers in group with miss matching virtual IPs?
+   2. Virtual IP not in in the same subnet as all interfaces?
+   3. Virtual IP in use by some other device in the subnet?
+3. Router with highest priority not active?
+   1. HSRP routers will listen for a certain amount of time on boot and default to the active router in the HSRP group if no other router with a better priority or IP speaks during that time
+      1. This methodology favors the router who booted first if _preemption is not enabled_
+4. Multiple active routers in a given group?
+   1. Version miss match?
+   2. ACL blocking UDP port 1985 and/or 224.0.0.2/224.0.0.102?
+
+Example troubleshooting output:
+
+```
+Router#show standby
+GigabitEthernet0/0 - Group 2
+	State is Standby
+		6 State changes last change is 00:00:25
+	Virtual IP address is 10.10.10.15
+	Active virtual MAC address is 0000.0c07.ac02
+		Local virtual MAC address is 0000.0c07.ac02 (v1 default)
+	Hello time 3 sec, hold time 10 sec
+		Next hello sent in 0.752 secs
+	Preemption enabled
+	Active router is 10.10.10.1, priority 100 (expires in 8.080 sec)
+	Standby router is local
+	Priority 90 (configured 140)
+		Track object 1 state Down decrement 50
+	Group name is "hsrp-g0/0-2" (default)
+GigabitEthernet0/0 - Group 1
+	State is Standby
+		4 State changes last change is 00:00:25
+	Virtual IP address is 10.10.10.10
+	Active virtual MAC address is 0000.0c07.ac01
+		Local virtual MAC address is 0000.0c07.ac01 (v1 default)
+	Hello time 3 sec, hold time 10 sec
+		Next hello sent in 0.752 secs
+	Preemption enabled
+	Active router is 10.10.10.1, priority 140 (expires in 8.080 sec)
+	Standby router is local
+	Priority 50 (default 100)
+		Track object 1 state Down decrement 50
+	Group name is "hsrp-g0/0-1" (default)
 ```
 
