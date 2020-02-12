@@ -391,9 +391,10 @@ Group  Port-channel  Protocol        Ports
   1     Po1(SU)          PagP        Fa0/1(P)      Fa0/2(P)
 ```
 
-## OSPF
+## OSPF (v2)
 
 Enable with a process ID:
+
 - `Router(config)#router ospf <process-id>`
   - `process-id` needs to be **locally** unique
 
@@ -434,6 +435,7 @@ Adjusting timers:
   - Default is 30 seconds for Serial interfaces
 - Dead timer: `Router(config-if)#ip ospf dead-interval <seconds>`
   - Default is 4 * hello timer value
+  - Changing the hello timer will **automatically** change the dead timer to 4x the value set
 
 ### Cost
 
@@ -463,6 +465,20 @@ Adjusting interface cost:
   | Gigabit Ethernet | 1,000,000 Kbps    | 1    |
   | 10G Ethernet     | 10,000,000 Kbps   | 1    |
   | 100G Ethernet    | 100,000,000 Kbps  | 1    |
+
+### IPv6 (OSPFv3)
+
+Same as IPv4 with the following notes:
+
+- OSPF neighbors **do not** need to be in the same subnet (with global or unique local addresses) since they use link-local addresses to communicate directly instead
+  - When looking at the output of `show ipv6 ospf neighbor` or `show ipv6 ospf interfaces brief`, the IPv4 column for neighbor IP address has been replaced with an interface ID that is assigned locally
+- OSPF RID is set **the same way** and selection priority is done **the same way** (_using IPv4 addresses_)
+- OSPFv3 uses `ipv6` instead of the `ip` configuration command for all the same commands
+- OSPFv3 uses the same OPSFv2 interface configuration assignment to enable OSPF on an interface
+  - `Router(config-if)#ipv6 ospf <process-id> area <area>`
+  - OSPFv3 **does not** allow the use of the OSPFv1 `network` command to assign OSPF enabled interfaces
+- OPSFv2's `224.0.0.5` is `FF02::5` in OPSFv3 for neighbor relationship forming
+- OPSFv2's `224.0.0.6` is `FF02::6` in OPSFv3 for DR & BDR communication
 
 ### Troubleshooting
 
@@ -611,6 +627,21 @@ LinkID        	ADV Router    	Age  	Seq#         	CheckSum  	Link count
 192.168.10.1  	192.168.10.1  	181  	0x80000002C  	0x00EB29  	7
 192.168.20.1  	192.168.20.1  	91   	0x80000002C  	0x00EB29  	3
 192.168.40.1  	192.168.40.1  	90   	0x80000002C  	0x00EB29  	3
+```
+
+```
+Router#show ipv6 ospf neighbor
+Neighbor ID  Pri  State         Dead Time  Interface Id  Interface
+2.2.2.2      1    Full/BDR      00:00:33   4             GigabitEthernet0/0
+3.3.3.3      1    Full/DROTHER  00:00:33   4             GigabitEthernet0/0
+4.4.4.4      1    Full/DROTHER  00:00:33   4             GigabitEthernet0/0
+```
+
+```
+Router#show ipv6 ospf interface brief
+Interface  	PID  	Area  	Intf id  	Cost  	State  	Nbrs F/C
+Gi0/0      	10   	0     	4        	1     	DR     	3/3
+Gi0/1      	10   	0     	5        	1     	DR     	0/0
 ```
 
 ## EIGRP
