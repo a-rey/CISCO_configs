@@ -8,6 +8,7 @@
 
 Define on an interface:
 - `Switch(config-if)#switchport access vlan <vlan>`
+- _All_ interfaces are in VLAN1 (the default VLAN) by default
 
 Define globally:
 - `Switch(config)#vlan <vlan>`
@@ -18,13 +19,13 @@ Define globally:
 ### Voice VLAN
 
 Define on an interface:
-- `Switch(config-if)#switchport voice vlan <x|none|untagged|dot1p>`
+- `Switch(config-if)#switchport voice vlan <num|none|untagged|dot1p>`
   - Must have CDP enabled on port
+  - `num` is the numerical VLAN ID
 
 ### Troubleshooting
 
 Issues:
-
 1. VLAN does not exist?
    1. Did you exit VLAN configuration mode?
 
@@ -109,7 +110,6 @@ Disable all auto negotiation (trunk protocol negotiation **and** operational mod
 ### Troubleshooting
 
 Common Issues:
-
 1. VLAN not allowed on trunk?
 2. Bad DTP paramaters (eg `auto`&`auto` or `access`&`desirable`)?
 3. Native VLANs don't match?
@@ -145,11 +145,6 @@ Priority for untagged frames: 0
 Override vlan tag priority: FALSE
 Voice VLAN: none
 Appliance trust: none
-```
-
-```
-Switch#show interfaces fastEthernet 0/2 trunk
-TODO
 ```
 
 ## VLAN Trunking Protocol
@@ -340,11 +335,12 @@ Port 11(FastEthernet0/11) of VLAN0001 is designated forwarding
 
 Define static channel:
 - `Switch(config-if-range)#channel-group <number> mode on`
+- `number` does _not_ need to match on both devices
+- `number` must _match_ for all interfaces in local Etherchannel 
 
 ### PAgP
 
 Define dynamic channel (PAgP - Cisco Proprietary):
-
 - `Switch(config-if-range)#channel-group <number> mode <desirable|auto>`
 
 |             | `on`        | `desirable` | `auto`      |
@@ -356,7 +352,6 @@ Define dynamic channel (PAgP - Cisco Proprietary):
 ### LACP
 
 Define dynamic channel (LACP - IEEE 802.3ad):
-
 - `Switch(config-if-range)#channel-group <number> mode <passive|active>`
 
 |           | `on`        | `active`    | `passive`   |
@@ -370,6 +365,7 @@ Define dynamic channel (LACP - IEEE 802.3ad):
 Common Issues:
 1. Etherchannel interface up&down?
    1. Check for PAgP/LACP dynamic channel miss matches
+   2. Other device missing Etherchannel configuration?
 
 Example troubleshooting output:
 
@@ -392,7 +388,6 @@ Group  Port-channel  Protocol        Ports
 ## OSPF (v2)
 
 Enable with a process ID:
-
 - `Router(config)#router ospf <process-id>`
   - `process-id` needs to be **locally** unique
 
@@ -439,7 +434,6 @@ Adjusting timers:
 
 Adjusting interface cost:
 - Manually:
-  
   - `Router(config-if)#ip ospf cost <cost>`
 - By interface bandwidth:
   - `Router(config-if)#bandwidth <bandwidth in Kbps>`
@@ -449,7 +443,6 @@ Adjusting interface cost:
   - `Router(config-router)#auto-cost reference-bandwidth <bandwidth in Mbps>`
     - Default is 100000 bps or 100 Mbps
 - Cost equation: 
-  
   - `cost = (reference bandwidth / interface bandwidth)`
 - Default costs:
 
@@ -467,7 +460,6 @@ Adjusting interface cost:
 ### IPv6 (OSPFv3)
 
 Same as IPv4 with the following notes:
-
 - OSPF neighbors **do not** need to be in the same subnet (with global or unique local addresses) since they use link-local addresses to communicate directly instead
   - When looking at the output of `show ipv6 ospf neighbor` or `show ipv6 ospf interfaces brief`, the IPv4 column for neighbor IP address has been replaced with an interface ID that is assigned locally
 - OSPF RID is set **the same way** and selection priority is done **the same way** (_using IPv4 addresses_)
@@ -481,7 +473,6 @@ Same as IPv4 with the following notes:
 ### Troubleshooting
 
 Common Issues:
-
 1. No OSPF neighbors...
    1. Authentication values incorrect?
    2. Local interfaces not in an up&up state?
@@ -713,7 +704,6 @@ Modify delay:
 ### EIGRP (IPv6)
 
 Same as IPv4 with the following notes:
-
 - EIGRP neighbors **do not** need to be in the same subnet (with global or unique local addresses) since they use link-local addresses to communicate directly instead
   - When looking at the output of `show ipv6 eigrp neighbor` or `show ipv6 eigrp interfaces`, the IPv4 column for neighbor IP address has been replaced with an interface ID that is assigned locally
 - EIGRP RID is set **the same way** and selection priority is done **the same way** (_using IPv4 addresses_)
@@ -731,7 +721,6 @@ Same as IPv4 with the following notes:
 ### Troubleshooting
 
 Common Issues:
-
 1. No EIGRP neighbors...
    1. Authentication values incorrect?
    2. Local interfaces not in an up&up state?
@@ -849,16 +838,13 @@ D    192.168.40.0/24 [90/2172416] via 192.0.2.10, 00:17:22, Serial0/1/0
 ## BGP
 
 Enable with an ASN:
-
 - `Router(config)#router bgp <asn>`
   - `asn` needs to be **globally** unique
 
 Define a remote AS to connect with as a neighbor:
-
 - `Router(config-router)#neighbor <neighbor-ip> remote-as <neighbor-asn>`
 
 Manually specify Router ID (RID):
-
 - `Router(config-router)#bgp router-id <rid>`
   - RID selection priority ranking:
     1. `bgp router-id` command value
@@ -866,7 +852,6 @@ Manually specify Router ID (RID):
     3. Highest interface IP
 
 Specify internal networks to advertise over eBGP:
-
 - `Router(config-router)#network <network> mask <mask>`
 - Can also configure using _classful_ network ID:
   - `Router(config-router)#network <classful-network>`
@@ -875,7 +860,6 @@ Specify internal networks to advertise over eBGP:
 ### Troubleshooting
 
 Common Issues:
-
 1. No BGP neighbors...
    1. Is the local interface up&up?
    2. Any ACLs blocking TCP port 179?
@@ -1061,30 +1045,27 @@ TCP Semaphore      0x30CD7404  FREE
 ## HDLC
 
 Enable HDLC on an interface:
-
 - `Router(config-if)#encapsulation hdlc`
   - This is the _default_ encapuslation for serial interfaces
 
 Disable keepalive messages:
-
 - `Router(config-if)#no keepalive `
   - Keepalives are enabled by default
   - Sent every 10 seconds by default
 
 Define interface clock rate:
-
 - `Router(config-if)#clock rate <bps>`
   - In units of bits per second
   - Default is T1 speed (1544Kbps)
 
 Define interface bandwidth:
-
 - `Router(config-if)#bandwidth <Kbps>`
   - In units of Kilo bits per second
   - Default is T1 speed (1544Kbps)
   - Has **no** effect on actual line speed. Used for routing protocol metric calculations.
 
 Common serial TDMA speeds:
+- Overhead is 8Kbps
 
 | Name        | Rate                            |
 | ----------- | ------------------------------- |
@@ -1097,7 +1078,6 @@ Common serial TDMA speeds:
 ### Troubleshooting
 
 Common Issues:
-
 1. Interface is up&down?
    1. If other side is flipping between states, check for encapsulation miss match
    2. If other side _stays up_, check for keepalive messages disabled on one side but not the other
@@ -1144,18 +1124,15 @@ Serial0/0/0 is up, line protocol is up
 ## PPP
 
 Enable PPP on an interface:
-
 - `Router(config-if)#encapsulation ppp`
   - The _default_ encapuslation for serial interfaces is HDLC
 
 Define interface clock rate:
-
 - `Router(config-if)#clock rate <bps>`
   - In units of bits per second
   - Default is T1 speed (1544Kbps)
 
 Define interface bandwidth:
-
 - `Router(config-if)#bandwidth <Kbps>`
   - In units of Kilo bits per second
   - Default is T1 speed (1544Kbps)
@@ -1164,19 +1141,16 @@ Define interface bandwidth:
 ### PAP
 
 Enable PAP on the interface connecting to the neighbor:
-
 - `Router(config-if)#ppp authentication pap `
   - PPP must be enabled on the interface first before this command
 
 Define _local_ username and password:
-
 - `Router(config-if)#ppp pap sent-username <username> password <password> `
   - PPP must be enabled on the interface first before this command
   - `username` is the username sent to _neighbor device_ 
   - `password` is the password sent to _neighbor device_
 
 Define a _neighbor_ username and password expected from PAP:
-
 - `Router(config)#username <username> password <password>`
   - `username` must match case-sensitive the username configured on the _neighbor_ device
   - `password` must match case-sensitive the password configured on the _neighbor_ device
@@ -1184,12 +1158,10 @@ Define a _neighbor_ username and password expected from PAP:
 ### CHAP
 
 Enable CHAP on the interface connecting to the neighbor device:
-
 - `Router(config-if)#ppp authentication chap `
   - PPP must be enabled on the interface first before this command
 
 Define username and password for neighbor device:
-
 - `Router(config)#username <username> password <password>`
   - Must be done on _both_ devices
   - `username` must match case-sensitive the _hostname_ of the _neighbor_ device
@@ -1198,7 +1170,6 @@ Define username and password for neighbor device:
 ### MLPPP
 
 Create local multilink interface:
-
 - `Router(config)#interface multilink <num>`
   - `num` must match multilink group locally and on neighbor router
 - `Router(config-if)#encapsulation ppp`
@@ -1209,7 +1180,6 @@ Create local multilink interface:
   - `num` must match local group and on neighbor router
 
 Add the multilink interface on all serial interfaces in the multilink:
-
 -  `Router(config)#interface serial <int>`
 -  `Router(config-if)#encapsulation ppp`
 -  `Router(config-if)#ppp multilink`
@@ -1221,7 +1191,6 @@ Add the multilink interface on all serial interfaces in the multilink:
 ### PPPoE
 
 Create _logical_ dialer interface:
-
 - `Router(config)#interface dialer <num>`
   - `num` is only _locally_ unique
 - `Router(config-if)#encapsulation ppp`
@@ -1234,7 +1203,6 @@ Create _logical_ dialer interface:
   - Layer 1: `pool` is only _locally_ unique
 
 Define _physical_ Ethernet interface:
-
 -  `Router(config)#interface <eth-int>`
 -  `Router(config-if)#pppoe enable`
    - Layer 2: enables PPoE on interface
@@ -1246,7 +1214,6 @@ Define _physical_ Ethernet interface:
 ### Troubleshooting
 
 Common Issues:
-
 1. PPP issues...
    1. Interface is up&down?
       1. If other side is flipping between states, check for encapsulation miss match
@@ -1283,11 +1250,6 @@ Router#show controllers serial 0/0/1
 Interface Serial0/0/1
 Hardware is SCC
 DTE V.35 RX clock detected.
-```
-
-```
-Router#show ppp all
-TODO
 ```
 
 ```
@@ -1348,16 +1310,6 @@ Serial0/0/1 is up, line protocol is up
 ```
 
 ```
-Router#show interfaces virtual-access <x>
-TODO
-```
-
-```
-Router#show interfaces virtual-access <x> configuration
-TODO
-```
-
-```
 Router#show interfaces dialer 2
 Dialer2 is up, line protocol is up (spoofing)
   Hardware is Unknown
@@ -1372,13 +1324,11 @@ Dialer2 is up, line protocol is up (spoofing)
 ## GRE Tunnels
 
 Define physical interface _public_ IP:
-
 - `Router(config)#interface <int>`
 - `Router(config-if)#ip address <public-ip> <mask>`
   - `public-ip` is the public IP used for the point-to-point connection across the WAN
 
 Define the tunnel:
-
 - `Router(config)#interface tunnel <num>`
   - `num` is only _locally_ unique
 - `Router(config-if)#tunnel mode gre ip`
@@ -1395,7 +1345,6 @@ Define the tunnel:
 ### Troubleshooting
 
 Common Issues:
-
 1. Is tunnel interface up&up?
    1. Tunnels are _stateless_
       1. Local end being up&up **does not** mean the remote end is up&up as well
@@ -1482,26 +1431,26 @@ Tunnel0             172.16.1.1   YES NVRAM   up                     up
 ## ACLs
 
 Adding notes to an ACL (named & numbered):
-
 - `Router(config)#access-list <num> remark <msg>`
 - `Router(config-std-nacl)#remark <msg>`
 - `Router(config-ext-nacl)#remark <msg>`
 
 Special IP and wildcard mask combinations:
-
-- `host <ip>` = `<ip> 0.0.0.0`
-- `any` = `x.x.x.x 255.255.255.255`
+- IPv4:
+  - `host <ip>` = `<ip> 0.0.0.0`
+  - `any` = `x.x.x.x 255.255.255.255`
+- IPv6:
+  - `host <ipv6>` = `<ipv6>/128`
+  - `any` = `::/0`
 
 ### Standard
 
 Numbered ACL definition:
-
 - `Router(config)#access-list <num> <permit|deny> <src> <wildcard> [log]` 
   - `num` must be in ranges 1-99 or 1300-1999
   - `log` keyword enables notificational logging (level 6) for matching packets
 
 Named ACL definition:
-
 -  `Router(config)#ip access-list standard <num|name>`
   - `num` must be in ranges 1-99 or 1300-1999 _if used_
     - Numbered ACLs configured through named ACL configuration mode show up as numbered ACLs in the running configuration but are managed through named ACL configuration mode
@@ -1512,7 +1461,6 @@ Named ACL definition:
 ### Extended
 
 Numbered ACL definition:
-
 - `Router(config)#access-list <num> <permit|deny> <proto> <src> <wc> <dst> <wc> [log]` 
   - `num` must be in ranges 100-199 or 2000-2699
   - `log` keyword enables notificational logging (level 6) for matching packets
@@ -1521,7 +1469,6 @@ Numbered ACL definition:
     - Not specfying specific ports assumes _all_ ports will match rule
 
 Named ACL definition:
-
 -  `Router(config)#ip access-list extended <num|name>`
   - `num` must be in ranges 100-199 or 2000-2699 _if used_
     - Numbered ACLs configured through named ACL configuration mode show up as numbered ACLs in the running configuration but are managed through named ACL configuration mode
@@ -1554,7 +1501,6 @@ Common application ports to know:
 ### IPv6
 
 Similar to IPv4 ACLs with the following notes:
-
 - Only use _named_ ACLs and only match IPv6 traffic
   - `Router(config)#ipv6 access-list <name>`
 - Can be used in conjunction with IPv4 ACLs (Dual Stack)
@@ -1568,7 +1514,7 @@ Similar to IPv4 ACLs with the following notes:
   - `Router(config-if)#ipv6 traffic-filter <name> <in|out>`
 - Applying IPv6 ACL to a VTY line:
   - `Router(config-line)#ipv6 access-class <name> <in|out>`
-- IPv6 ACLs also end in a default _deny any any_ but also have the following implicit permits:
+- IPv6 ACLs also end in a default `deny any any` but also have the following **implicit permits**:
   - `permit icmp any any nd-na`
   - `permit icmp any any nd-ns`
   - These do _not_ include NDP router solicitations/advertisements:
@@ -1578,11 +1524,9 @@ Similar to IPv4 ACLs with the following notes:
 ### Troubleshooting
 
 Common Issues:
-
 1. Standard ACLs **close to source**?
 2. Extended ACLs **close to destination**?
 3. ACL rules ordered most to least specific?
-   
    1. ACLs use _first match_ logic
 4. ACL applied in wrong direction?
 5. ACL has bad wildcard mask or swapped source and destination addresses?
@@ -1675,7 +1619,6 @@ Serial0/0/0 is up, line protocol is up
 ### Layer 3 Switch
 
 Enable IPv4/IPv6 routing:
-
 - `Switch(config)#sdm prefer lanbase-routing`
   - Configures ASIC hardware to make room in memory for IP routing tables
   - _May_ require a `reload` before enabling IP routing with the next command
@@ -1685,19 +1628,16 @@ Enable IPv4/IPv6 routing:
 - `Switch(config)#ip routing`
 
 Define a Layer 3 switch SVI (logical):
-
 - `Switch(config)#interface vlan <num>`
 - `Switch(config-if)#ip address <ip> <mask>`
 - Used between access and distribution switches with _multiple access_ ports connected to a VLAN
 
 Define a Layer 3 Switch Routed Port (physical):
-
 - `Switch(config-if)#no switchport`
 - `Switch(config-if)#ip address <ip> <mask>`
 - Used between distribution and core switches with _one_ link between each other for point-to-point routing 
 
 Define a Layer 3 Switch EtherChannel (Layer 3):
-
 1. Used between distribution and core switches with _multiple_ links between each other for redundant/load balanced routing 
 2. Define associated _physical_ interfaces:
    - `Switch(config)#interface <int>`
