@@ -1,5 +1,3 @@
-
-
 # CISCO CCNA Routing & Switching (ICND1 & 2) Configuration Guide
 
 [TOC]
@@ -711,6 +709,24 @@ Modify bandwidth:
 Modify delay:
 - `Router(config-if)#delay <delay in 10s of microseconds>`
   - Default delay can be seen with `Router#show int <int>`
+
+### EIGRP (IPv6)
+
+Same as IPv4 with the following notes:
+
+- EIGRP neighbors **do not** need to be in the same subnet (with global or unique local addresses) since they use link-local addresses to communicate directly instead
+  - When looking at the output of `show ipv6 eigrp neighbor` or `show ipv6 eigrp interfaces`, the IPv4 column for neighbor IP address has been replaced with an interface ID that is assigned locally
+- EIGRP RID is set **the same way** and selection priority is done **the same way** (_using IPv4 addresses_)
+  - If the device does not have an IPv4 address, you will need to set it
+- EIGRP uses `ipv6` instead of the `ip` configuration command for all the same commands
+- EIGRP uses interface configuration assignment to enable EIGRP on an interface
+  - `Router(config-if)#ipv6 eigrp <asn>`
+  - EIGRP **does not** allow the use of the `network` command to assign EIGRP enabled interfaces
+- EIGRP for IPv4's `224.0.0.10` is `FF02::A` in EIGRP IPv6 for neighbor relationship forming
+- EIGRP dual-stack has different values for the following traits for the IPv4 and IPv6 configuration:
+  - Equal/unqual load ballancing (`variance` & `maximum-paths`)
+  - Hello/hold timers
+  - **Not** metric calculation. This is configured per interface with `delay` and `bandwidth` commands and applies for **both** IPv4 and IPv6 EIGRP.
 
 ### Troubleshooting
 
@@ -1535,6 +1551,30 @@ Common application ports to know:
 | 443       | TCP       | SSL         | -                    |
 | 514       | UDP       | SYSLOG      | -                    |
 
+### IPv6
+
+Similar to IPv4 ACLs with the following notes:
+
+- Only use _named_ ACLs and only match IPv6 traffic
+  - `Router(config)#ipv6 access-list <name>`
+- Can be used in conjunction with IPv4 ACLs (Dual Stack)
+  - 1 IPv6 and/or IPv4 ACL per interface per direction 
+- No concept of wildcard masks. Instead, IPv6 ACLs use prefix lengths.
+- Standard IPv6 ACL:
+  - `Router(config-ipv6-acl)#<permit|deny> <ipv6|icmp|tcp|...> <src> <dst>`
+  - Contain a source _and_ destination **only**
+- Extended IPv6 ACLs look like standard ones, but they match on ports/icmp types/etc
+- Applying IPv6 ACL to an interface:
+  - `Router(config-if)#ipv6 traffic-filter <name> <in|out>`
+- Applying IPv6 ACL to a VTY line:
+  - `Router(config-line)#ipv6 access-class <name> <in|out>`
+- IPv6 ACLs also end in a default _deny any any_ but also have the following implicit permits:
+  - `permit icmp any any nd-na`
+  - `permit icmp any any nd-ns`
+  - These do _not_ include NDP router solicitations/advertisements:
+    - `permit icmp any any router-advertisement`
+    - `permit icmp any any router-solicitation`
+
 ### Troubleshooting
 
 Common Issues:
@@ -1550,12 +1590,16 @@ Common Issues:
 7. Router self-pings...
    1. To Serial interfaces will leave local interface and use inbound ACL if there is one
    2. To Ethernet interfaces will **not** leave local interface and instead test local TCP/IP stack
-8. Router routing protocol overhead being blocked?
-   1. | Protocol | Addresses             | Transport Protocol         |
-      | -------- | --------------------- | -------------------------- |
-      | RIPv2    | 224.0.0.9             | UDP port 520               |
-      | OSPF     | 224.0.0.5 & 224.0.0.6 | OSPF (protocol number 89)  |
-      | EIGRP    | 224.0.0.10            | EIGRP (protocol number 88) |
+8. IPv6 ACL blocking required ICMP values? Example bad ACLs:
+   1. `deny icmp any any`
+   2. `deny ipv6 ff00::/8 any`
+   3. `deny ipv6 any ff0::/8`
+9. Router routing protocol overhead being blocked?
+   1. | Protocol | Addresses (IPv4)      | Transport Protocol         | Addresses (IPv6) |
+      | -------- | --------------------- | -------------------------- | ---------------- |
+      | RIPv2    | 224.0.0.9             | UDP port 520               | FF02::9          |
+      | OSPF     | 224.0.0.5 & 224.0.0.6 | OSPF (protocol number 89)  | FF02::5, FF02::6 |
+      | EIGRP    | 224.0.0.10            | EIGRP (protocol number 88) | FF02::A          |
 
 Example troubleshooting output:
 
@@ -1569,6 +1613,19 @@ Router#show ip access-lists
 	50  deny tcp any host 172.30.4.129 eq telnet
 	60  deny tcp any host 172.30.4.190 eq telnet
 	70  permit ip any any
+```
+
+```
+Router#show ipv6 access-lists
+ Ipv6 access list advanceipv6
+	 permit icmp host 3001::1 any sequence 10
+	 permit icmp host 3000::1 any sequence 20
+	 deny icmp 3000::/64 any sequence 30
+	 permit tcp host 3000::1 eq 22 any sequence 40
+	 permit tcp host 2750::2 eq 22 any sequence 50
+	 deny tcp host 3000::1 eq telnet any sequence 60
+	 deny tcp host 2750::2 eq telnet any sequence 70
+	 permit ipv6 any any sequence 80
 ```
 
 ```
@@ -1880,4 +1937,12 @@ GigabitEthernet0/0 - Group 1
 		Track object 1 state Down decrement 50
 	Group name is "hsrp-g0/0-1" (default)
 ```
+
+## SNMP
+
+TODO
+
+### Troubleshooting
+
+TODO
 
