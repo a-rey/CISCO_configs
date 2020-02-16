@@ -1,8 +1,66 @@
 # CISCO CCNA Routing & Switching (ICND1 & 2) Configuration Guide
 
-[TOC]
-
 <!-- ToC generated using https://imthenachoman.github.io/nGitHubTOC/ -->
+
+- [CISCO CCNA Routing & Switching (ICND1 & 2) Configuration Guide](#cisco-ccna-routing--switching-icnd1--2-configuration-guide)
+  - [VLANs](#vlans)
+    - [Voice VLAN](#voice-vlan)
+    - [Troubleshooting](#troubleshooting)
+  - [Trunks](#trunks)
+    - [Dynamic Trunking Protocol](#dynamic-trunking-protocol)
+    - [Troubleshooting](#troubleshooting-1)
+  - [VLAN Trunking Protocol](#vlan-trunking-protocol)
+    - [Troubleshooting](#troubleshooting-2)
+  - [Spanning Tree Protocol](#spanning-tree-protocol)
+    - [PortFast](#portfast)
+    - [BPDU Guard](#bpdu-guard)
+    - [Troubleshooting](#troubleshooting-3)
+  - [EtherChannel (Layer 2)](#etherchannel-layer-2)
+    - [PAgP](#pagp)
+    - [LACP](#lacp)
+    - [Troubleshooting](#troubleshooting-4)
+  - [OSPF (v2)](#ospf-v2)
+    - [Cost](#cost)
+    - [IPv6 (OSPFv3)](#ipv6-ospfv3)
+    - [Troubleshooting](#troubleshooting-5)
+  - [EIGRP](#eigrp)
+    - [Metric](#metric)
+    - [EIGRP (IPv6)](#eigrp-ipv6)
+    - [Troubleshooting](#troubleshooting-6)
+  - [BGP](#bgp)
+    - [Troubleshooting](#troubleshooting-7)
+  - [HDLC](#hdlc)
+    - [Troubleshooting](#troubleshooting-8)
+  - [PPP](#ppp)
+    - [PAP](#pap)
+    - [CHAP](#chap)
+    - [MLPPP](#mlppp)
+    - [PPPoE](#pppoe)
+    - [Troubleshooting](#troubleshooting-9)
+  - [GRE Tunnels](#gre-tunnels)
+    - [Troubleshooting](#troubleshooting-10)
+  - [ACLs](#acls)
+    - [Standard](#standard)
+    - [Extended](#extended)
+    - [IPv6](#ipv6)
+    - [Troubleshooting](#troubleshooting-11)
+  - [Inter-VLAN Routing](#inter-vlan-routing)
+    - [Layer 3 Switch](#layer-3-switch)
+    - [Router on a Stick](#router-on-a-stick)
+    - [Troubleshooting](#troubleshooting-12)
+  - [HSRP](#hsrp)
+    - [Troubleshooting](#troubleshooting-13)
+  - [SNMP](#snmp)
+    - [Version 1](#version-1)
+    - [Version 2c](#version-2c)
+    - [Version 3](#version-3)
+    - [Troubleshooting](#troubleshooting-14)
+  - [IP SLA](#ip-sla)
+    - [Troubleshooting](#troubleshooting-15)
+  - [SPAN](#span)
+    - [Local](#local)
+    - [Remote](#remote)
+    - [Troubleshooting](#troubleshooting-16)
 
 ## VLANs
 
@@ -1934,8 +1992,6 @@ Define a group:
 - `v1default` is the _default_ MIB view that gives access to the majority of the MIB
 - `acl` is the same as SNMP versions 1 & 2c
 - `noauth|auth|priv` differences:
-  - Authentication sends hashed version of password 
-  - Encryption encrypts entire message
   
   - | Keyword  | Integrity | Authentication | Encryption |
     | -------- | --------- | -------------- | ---------- |
