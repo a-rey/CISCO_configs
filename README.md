@@ -434,6 +434,7 @@ Adjusting timers:
 
 Adjusting interface cost:
 - Manually:
+  
   - `Router(config-if)#ip ospf cost <cost>`
 - By interface bandwidth:
   - `Router(config-if)#bandwidth <bandwidth in Kbps>`
@@ -443,6 +444,7 @@ Adjusting interface cost:
   - `Router(config-router)#auto-cost reference-bandwidth <bandwidth in Mbps>`
     - Default is 100000 bps or 100 Mbps
 - Cost equation: 
+  
   - `cost = (reference bandwidth / interface bandwidth)`
 - Default costs:
 
@@ -1527,6 +1529,7 @@ Common Issues:
 1. Standard ACLs **close to source**?
 2. Extended ACLs **close to destination**?
 3. ACL rules ordered most to least specific?
+   
    1. ACLs use _first match_ logic
 4. ACL applied in wrong direction?
 5. ACL has bad wildcard mask or swapped source and destination addresses?
@@ -1880,9 +1883,277 @@ GigabitEthernet0/0 - Group 1
 
 ## SNMP
 
-TODO
+_NOTE:_ SNMP servers are valid on Routers _and_ Switches. The below configuration examples may also be run on a Switch.
+
+Terminology:
+- OID = Variable (eg `1.3.6.12.19`)
+- MIB = Database of OIDs
+- NMS = Manager = Client
+  -  This is the device getting/setting MIB on different devices
+- Agent = Server
+  - This is the device with the MIB responding to NMS queries/requests
+
+Define server location & contact:
+- `Router(config)#snmp-server location <msg>`
+- `Router(config)#snmp-server contact <msg>`
+
+Enable SNMP traps:
+- `Router(config)#snmp-server enable traps`
+
+### Version 1
+
+ Define a community string:
+- `Router(config)#snmp-server community <password> <ro|rw> [ipv6 <acl>] [<acl>]`
+- `password` must match on both SNMP NMS and agent 
+  - Sent in **clear text**
+- `ro` defines a read only password that only allows for SNMP Get Requests from NMS to agent 
+- `rw` defines a read & write password that allows for SNMP Get & Set Requests from NMS to agent
+- `acl` can be IPv6 or IPv4 and is applied to **incoming** traffic to the agent
+
+Define an NMS to receive traps from agent:
+- `Router(config)#snmp-server host <address> traps version 1 <password>`
+- `address` is the IP or hostname of the NMS
+- `password` is the community string shared with the NMS
+  - Sent in **clear text**
+
+### Version 2c
+
+Define a community string:
+- Same as SNMP version 1. See above.
+
+Define an NMS to receive traps from agent:
+- `Router(config)#snmp-server host <address> <traps|informs> version 2c <password>`
+- Same as SNMP version 1 with the addition of an `inform` option
+  - Same as `trap` but requires ACK from NMS for _error recovery_
+
+### Version 3
+
+Define a group:
+- `Router(config)#snmp-server group <name> v3 <noauth|auth|priv> [write v1default] [access [ipv6] <acl>]`
+- `name` is the name of the group
+- `v1default` is the _default_ MIB view that gives access to the majority of the MIB
+- `acl` is the same as SNMP versions 1 & 2c
+- `noauth|auth|priv` differences:
+  - Authentication sends hashed version of password 
+  - Encryption encrypts entire message
+  
+  - | Keyword  | Integrity | Authentication | Encryption |
+    | -------- | --------- | -------------- | ---------- |
+    | `noauth` | Yes       | No             | No         |
+    | `auth`   | Yes       | Yes            | No         |
+    | `priv`   | Yes       | Yes            | Yes        |
+
+Define a user:
+- `Router(config)#snmp-server user <name> <group> v3 [auth <options>] [priv <options>]`
+- `name` is the username
+- `group` is the group for this user
+- `auth` option is required only if user's group has `auth` **or** `priv` enabled
+- `priv` oprion is required onyl if user's group has `priv` enabled
+
+Define an NMS to receive traps from agent:
+- `Router(config)#snmp-server host <address> version 3 <noauth|auth|priv> <username>`
+- `address` is the IP or hostname of the NMS
+- `username` is the username allows to receive traps
+- `noauth|auth|priv` option must match the group option set for the `username`
 
 ### Troubleshooting
 
-TODO
+Common Issues:
+1. NMS cannot set MIB on server?
+   1. SNMP v1/v2c: Is the community string being used read-only?
+   2. SNMPv3: `snmp-server user` missing `auth` and/or `priv` to match the group's setting?
+2. NMS cannot connect to server?
+   1. ACL blocking UDP port 161/162?
+
+Example troubleshooting output:
+
+```
+Router#show snmp chassis
+69696969
+```
+
+```
+Router#show snmp contact
+Dude Bro (420) 420-6969
+```
+
+```
+Router#show snmp location
+The sun dude...
+```
+
+```
+Router#show snmp community
+
+Community name: ILMI
+Community Index: cisco0
+Community Securityname: ILMI
+storage-type:  read only      active
+
+Community name: keep-it-safe
+Community Index: cisco1
+Community Securityname: keep-it-safe
+storage-type:  read write      active
+
+Community name: keep-it-safe@1
+Community Index: cisco2
+Community Securityname: keep-it-safe@1
+storage-type:  read write      active
+
+Community name: keep-it-secret
+Community Index: cisco2
+Community Securityname: keep-it-secret
+storage-type:  read only      active
+
+Community name: keep-it-secret@1
+Community Index: cisco3
+Community Securityname: keep-it-secret@1
+storage-type:  read only      active
+```
+
+```
+Router#show snmp host
+Notification host: 1.1.1.1    udp-port: 162    type: trap
+user: this-is-old-school    security model: v1
+
+Notification host: 192.168.69.69    udp-port: 162    type: trap
+user: this-is-secret-i-think    security model: v2c
+
+Notification host: 10.10.10.100    udp-port: 162    type: trap
+user: dude    security model: v3 priv
+```
+
+## IP SLA
+
+Define an SLA:
+- `Router(config)#ip sla <num>`
+
+Enable an SLA forever starting now:
+- `Router(config)#ip sla schedule <num> start-time now life forever`
+- `num` is the SLA number configured locally
+
+Define an ICMP Echo SLA:
+- `Router(config-ip-sla)#icmp-echo <ip>`
+- `ip` is the target you wish to marry this SLA to
+- Define the frequency in between ICMP Echo requests:
+  - `Router(config-ip-sla-echo)#frequency <seconds>`
+  - Default is 60 seconds
+
+### Troubleshooting
+
+Common Issues:
+1. No statistics?
+   1. Is SLA responder enabled on the other device?
+      1. Not needed from some SLAs (eg ICMP Echo SLA)
+2. Statistics show failures but history show success?
+   1. Increase the number of buckets?
+   2. Increase frequency?
+
+Example troubleshooting output:
+
+```
+Router#show ip sla summary
+IPSLAs Latest Operation Summary
+Codes : * active, ^ inactive, ~ pending
+
+ID     	Type       	Destination  	Stats  	Return Code  	Last Run
+*6969  	icmp-echo  	10.10.10.10  	-      	timeout      	4 seconds ago
+```
+
+```
+Router#show ip sla statistics
+IPSLAs Latest Operation Statistic
+
+IPSLA operation id:6969
+		  Latest RTT: NoConnection/Busy/Timeout
+Latest operation start time: Sat Feb 15 17:11:26 PST 2020
+Latest operation return code: timeout
+Number of successes: 0
+Number of failures: 1
+Operation time to live: forever
+```
+
+```
+Router#show ip sla configuration
+IP SLAs Infrastructure Engine- III
+Entry Number: 6969
+Owner:
+Tag:
+Operation timeout(milliseconds): 5000
+Type of operation to perform: icmp-echo
+Target address/Source address: 10.10.10.10/0.0.0.0
+Type of Service parameter: 0x0
+Request Size (ARR data portion): 28
+verify data: No
+vrf Name:
+Schedule:
+	 Operation frequency (seconds): 69 (not considered if randomly schedule)
+	 Next Scehduled Start Time: Start time already passed
+	 Group Scheduled : FALSE
+	 Randomly Scheduled : FALSE
+	 Life (seconds) : forever
+	 Entry Ageout (seconds): Never
+	 Recurring (Starting everyday) : FALSE
+	 Status of entry (SNMP rowstatus): Active
+Threshold (milliseconds): 5000
+destribution Statistics:
+	 Number of statistic hours kept: 2
+	 Number of statistic distribution buckets kept: 1
+	 Statistic distribution interval (milliseconds): 20
+Enhanced history:
+History Statistics:
+	 Number of history Lives kept: 0
+	 Number of history Buckets kept: 15
+	 History Filter Type: None
+```
+
+## SPAN
+
+### Local
+
+Define sources:
+- `Switch(config)#monitor session <num> source <source> <rx|tx|both>`
+- `num` must match on _all_ local source ports in this SPAN
+- `source` can be a VLAN or physical interface (which can also be a trunk)
+- `both` is the default SPAN direction
+
+Define destinations:
+- `Switch(config)#monitor session <num> destination interface <dest>`
+- `num` must match on _all_ local destination ports and must match _all_ source ports in SPAN
+- `dest` must be a local interface number unless using remote SPAN
+  - Destination port is no longer considered in the switch's CAM table for unicast frames and has no source MAC tied to it in the CAM table 
+
+### Remote
+- Must define local VLAN as the destination for SPAN
+- The _same_ VLAN ID must be defined on _all_ switchs in between local source and remote destination port
+
+### Troubleshooting
+
+Common Issues:
+1. Local SPAN...
+   1. Destination...
+      1. Port can be used in only one SPAN at a time
+      2. Port cannot be a source SPAN port
+   2. Source...
+      1. Can have mutliple ports **or** VLANs
+         2. Cannot have a mix of VLANs and ports (one or the other) 
+      3. Can be an EtherChannel or trunk port
+      4. Can have a mix of Rx/Tx/Both as long as they are applied to _different_ SPAN sources
+
+Example troubleshooting output:
+
+```
+Switch#show monitor
+
+Session 1
+----------
+Type               : Local Session
+Source Ports       :
+    Boths          : Fa0/1-2
+    rx Only        : Gi0/1-2
+    tx Only        : Fa0/11
+Destination Ports  : Fa0/9-10
+Encapsulation      : Native
+Ingress            : Disabled
+```
 
